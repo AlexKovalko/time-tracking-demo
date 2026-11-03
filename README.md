@@ -24,12 +24,20 @@ docker compose up --build
 | `nginx` | `http://127.0.0.1:8081` | UI + proxy `/api` → API |
 | volume `sqlite_data` → **`time_tracking_demo_sqlite_data`** | `/data/time-tracking-demo.sqlite` в контейнере | персистентность после restart (**AC-11**) |
 
-**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте UI на **8080** — порт часто занят другим локальным стеком и даёт чужой 403. Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`.
+**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте UI на **8080** — порт оставляем другим стекам (например Queply). Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`.
 
 Образы: **только pnpm** (`corepack prepare pnpm@11.9.0`). Native `better-sqlite3`: в API Dockerfile — `python3`/`make`/`g++`; в `pnpm-workspace.yaml` — `onlyBuiltDependencies` / `allowBuilds`. Healthchecks: API (`GET /api/employees`), nginx (`wget` `/`).
 
-Опционально: `.env.example` → `.env` (например `SEED_ON_BOOT=false`). Compose читает `.env`, если файл есть.  
-Сброс демо-БД: `docker compose down -v` (удаляет volume), затем `up --build`.
+Опционально: `.env.example` → `.env` (например `SEED_ON_BOOT=false`). Compose читает `.env`, если файл есть.
+
+**Force reseed / densify (AC-17 / AC-30):** volume `time_tracking_demo_sqlite_data` переживает `down` без `-v`, а `SEED_ON_BOOT=true` **не** чистит уже существующие строки. Чтобы purge + dense demo (отделы, профили, entries для charts/report):
+
+```bash
+# Compose one-shot (then unset SEED_FORCE so later restarts keep data)
+SEED_FORCE=1 docker compose up -d api
+# or wipe the volume entirely:
+docker compose down -v && docker compose up --build
+```
 
 Проверка volume (данные остаются после `down` **без** `-v` + `up`):
 
@@ -56,8 +64,8 @@ pnpm --filter web exec vite preview --host 127.0.0.1 --port 8081
 
 - API: `http://127.0.0.1:3000/api`
 - SQLite по умолчанию: `apps/api/data/time-tracking-demo.sqlite`
-- Env: `PORT`, `SQLITE_PATH`, `SEED_ON_BOOT=false` (отключить seed на boot) — см. `docs/env.md`
-Повторный seed (force):
+- Env: `PORT`, `SQLITE_PATH`, `SEED_ON_BOOT`, `SEED_FORCE` — см. `docs/env.md`
+Повторный seed (force, local CLI — AC-17 / AC-30 densify):
 
 ```bash
 pnpm --filter api seed -- --force

@@ -8,9 +8,10 @@ Catalog for local and Docker Compose runs. Placeholders only — see root `.env.
 | --- | --- | --- | --- |
 | `PORT` | `3000` | Nest listen | Compose sets `3000`. |
 | `SQLITE_PATH` | `apps/api/data/time-tracking-demo.sqlite` (local) | better-sqlite3 file | Compose: `/data/time-tracking-demo.sqlite` on volume `time_tracking_demo_sqlite_data` (**AC-11**). |
-| `SEED_ON_BOOT` | `true` (Compose) | Seed on API boot | Set `false` to skip faker seed. Force re-seed: `pnpm --filter api seed -- --force`. |
+| `SEED_ON_BOOT` | `true` (Compose) | Seed on API boot | Set `false` to skip faker seed when DB empty. Does **not** purge existing rows. |
+| `SEED_FORCE` | `false` (Compose) | Force reseed on boot (**AC-17** / **AC-30**) | `true`/`1` deletes departments + employees + time_entries, then loads dense demo (depts, profiles, chart-ready entries). One-shot: `SEED_FORCE=1 docker compose up -d api`, then leave unset. Local CLI: `pnpm --filter api seed -- --force`. |
 
-Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `environment` still pins `PORT` and `SQLITE_PATH` for the container.
+Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `environment` still pins `PORT` and `SQLITE_PATH` for the container; `SEED_ON_BOOT` / `SEED_FORCE` come from `.env` or shell.
 
 ## Host ports (Compose)
 
@@ -19,7 +20,7 @@ Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `e
 | `api` | `3000` | `3000` | `http://localhost:3000/api` |
 | `nginx` (UI) | **`8081`** | `80` | `http://localhost:8081` (`/api` proxied to API) |
 
-**Why 8081:** host `:8080` is often occupied by another nginx (e.g. unrelated stacks) and may return **403**. Compose and Vite preview default to **8081**. Override only if you change `docker-compose.yml` and `WEB_BASE_URL` together.
+**Why 8081:** host `:8080` is often occupied by another stack (e.g. Queply) and must stay free. Compose and Vite preview default to **8081**. Override only if you change `docker-compose.yml` and `WEB_BASE_URL` together.
 
 ## Test / tooling (not app runtime)
 
@@ -38,4 +39,4 @@ Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `e
 - Docker volume name: **`time_tracking_demo_sqlite_data`** (`name: time_tracking_demo_sqlite_data`) → `/data` in `api` (`SQLITE_PATH=/data/time-tracking-demo.sqlite`).
 - Healthchecks: `api` polls `GET /api/employees`; `nginx` `wget` `/`.
 - Restart / `down` without `-v`: data (employees, entries, running timers) remains (**AC-11**).
-- Wipe demo DB: `docker compose down -v` (destroys the volume) then `docker compose up --build`.
+- **Volume caveat:** `SEED_ON_BOOT=true` alone does **not** replace data already on the volume. Force dense reseed (**AC-17** / **AC-30**): `SEED_FORCE=1` for one API boot, or wipe volume: `docker compose down -v` then `docker compose up --build`.
