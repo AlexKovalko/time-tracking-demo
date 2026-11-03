@@ -8,45 +8,40 @@ import {
   gotoEntries,
   gotoReport,
   gotoEmployees,
-  stickyTimerRoot,
+  timerChromeRoot,
   ensureTimerExpanded,
 } from "../fixtures";
 
 /**
- * time-tracking-ui AC-6
- * Sticky bottom-right timer remains available across section navigation.
+ * AC-3 (#34) complement — timer chrome persists across routes (FAB era).
+ * Supersedes always-expanded sticky from time-tracking-ui.
  */
-test.describe("AC-6 · sticky timer across routes", () => {
-  test("timer surface stays bottom-right and visible on Employees / Entries / Report", async ({
+test.describe("AC-3 · FAB timer across routes (#34)", () => {
+  test("FAB/timer chrome stays bottom-right on Employees / Entries / Report", async ({
     openApp: page,
   }) => {
     const name = `QA Sticky ${Date.now()}`;
     await createEmployeeUi(page, name);
     await startTimerUi(page, name, "Sticky across routes");
 
-    const assertStickyBottomRight = async () => {
-      const root = stickyTimerRoot(page);
+    const assertChrome = async () => {
+      const root = timerChromeRoot(page);
       await expect(root).toBeVisible();
       const box = await root.boundingBox();
       const viewport = page.viewportSize();
       expect(box).toBeTruthy();
       expect(viewport).toBeTruthy();
-      // Bottom-right quadrant (AC-6 — not mid-page in-flow block only)
       expect(box!.y + box!.height / 2).toBeGreaterThan(viewport!.height * 0.45);
       expect(box!.x + box!.width / 2).toBeGreaterThan(viewport!.width * 0.45);
-      await expect(byTestId(page, tid.timerElapsed)).toBeVisible();
     };
 
-    await assertStickyBottomRight();
-
+    await assertChrome();
     await gotoEntries(page);
-    await assertStickyBottomRight();
-
+    await assertChrome();
     await gotoReport(page);
-    await assertStickyBottomRight();
-
+    await assertChrome();
     await gotoEmployees(page);
-    await assertStickyBottomRight();
+    await assertChrome();
 
     await ensureTimerExpanded(page);
     await byTestId(page, tid.timerStopButton).click();

@@ -9,11 +9,11 @@ import {
 } from "../fixtures";
 
 /**
- * time-tracking-ui AC-7
+ * AC-3 (#34) FAB hide/restore non-regression (baseline rules)
  * Sticky timer: Start / Stop / live elapsed / hide / first-hide confirm / restore / Stop while collapsed.
  * Non-regression of baseline AC-17 hide/restore rules on sticky chrome.
  */
-test.describe("AC-7 · sticky timer start/stop/hide/restore", () => {
+test.describe("AC-3 · sticky timer start/stop/hide/restore", () => {
   test("starts with live hh:mm:ss, stops, and supports hide confirm + restore + stop-collapsed", async ({
     openApp: page,
   }) => {
