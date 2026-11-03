@@ -1,7 +1,8 @@
 # Time-tracking UI — product intent
 
 **Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
-**Slug:** `time-tracking-ui`  
+**Slug (work item):** `time-tracking-ui`
+**Product slug:** `time-tracking-demo`  
 **Project:** Time Tracking Demo (`time-tracking-demo`)  
 **Предшественник:** slug `time-tracking` — parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED; спеки `docs/specs/time-tracking/{product,agent,ux}.md`, стек `docs/STACK.md`  
 **UI port:** Compose / preview **:8081** (никогда :8080)  
