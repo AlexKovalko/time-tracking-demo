@@ -7,8 +7,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { EmployeeStatsQueryDto } from './dto/employee-stats.query';
+import { ListEmployeesQueryDto } from './dto/list-employees.query';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeesService } from './employees.service';
 
@@ -17,8 +20,18 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Get()
-  findAll() {
-    return this.employeesService.findAll();
+  findAll(@Query() query: ListEmployeesQueryDto) {
+    return this.employeesService.findPage(query.page, query.limit);
+  }
+
+  @Get(':id/stats')
+  stats(@Param('id') id: string, @Query() query: EmployeeStatsQueryDto) {
+    return this.employeesService.stats(id, query.from, query.to);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.employeesService.findOne(id);
   }
 
   @Post()

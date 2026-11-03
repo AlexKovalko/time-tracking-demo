@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { ReportChartsQueryDto } from './dto/report-charts.query';
 import { ReportPeriodQueryDto } from './dto/report-period.query';
 import { ReportsService } from './reports.service';
 
@@ -10,6 +11,16 @@ export class ReportsController {
   @Get('summary')
   summary(@Query() query: ReportPeriodQueryDto) {
     return this.reportsService.summary(query.from, query.to);
+  }
+
+  @Get('charts')
+  charts(@Query() query: ReportChartsQueryDto) {
+    return this.reportsService.charts(
+      query.from,
+      query.to,
+      query.bucket ?? 'day',
+      query.breakdown ?? 'employees',
+    );
   }
 
   @Get('export')
