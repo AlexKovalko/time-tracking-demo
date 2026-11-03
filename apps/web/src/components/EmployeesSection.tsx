@@ -26,6 +26,7 @@ import { useI18n } from "@/lib/i18n";
 export function EmployeesSection() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<Employee | null>(null);
@@ -42,6 +43,7 @@ export function EmployeesSection() {
     onSuccess: async () => {
       setName("");
       setNameError(null);
+      setCreateOpen(false);
       await queryClient.invalidateQueries({ queryKey: queryKeys.employees });
     },
     onError: () => setNameError(t("employees.errors.saveFailed")),
@@ -85,6 +87,12 @@ export function EmployeesSection() {
     createMutation.mutate(trimmed);
   }
 
+  function openCreate() {
+    setName("");
+    setNameError(null);
+    setCreateOpen(true);
+  }
+
   function openEdit(employee: Employee) {
     setEditTarget(employee);
     setEditName(employee.name);
@@ -98,39 +106,23 @@ export function EmployeesSection() {
   }
 
   return (
-    <section id="employees" aria-labelledby="employees-heading" className="flex flex-col gap-4">
-      <h2 id="employees-heading" className="text-xl font-semibold">
-        {t("employees.title")}
-      </h2>
-
-      <form onSubmit={onCreate} className="flex flex-wrap items-end gap-2">
-        <div className="flex min-w-[12rem] flex-1 flex-col gap-1.5">
-          <Label htmlFor="employees-name-input">{t("employees.nameLabel")}</Label>
-          <Input
-            id="employees-name-input"
-            data-testid="employees-name-input"
-            value={name}
-            placeholder={t("employees.namePlaceholder")}
-            onChange={(e) => {
-              setName(e.target.value);
-              setNameError(null);
-            }}
-            aria-invalid={!!nameError}
-          />
-        </div>
+    <section
+      id="employees"
+      aria-labelledby="employees-heading"
+      className="flex flex-col gap-4"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 id="employees-heading" className="text-xl font-semibold">
+          {t("employees.title")}
+        </h1>
         <Button
-          type="submit"
-          data-testid="employees-add-button"
-          disabled={createMutation.isPending}
+          type="button"
+          data-testid="employees-add-open"
+          onClick={openCreate}
         >
-          {t("employees.add")}
+          {t("employees.addOpen")}
         </Button>
-      </form>
-      {nameError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {nameError}
-        </p>
-      ) : null}
+      </div>
 
       <div data-testid="employees-list" className="flex flex-col gap-2">
         {employees.length === 0 ? (
@@ -169,42 +161,103 @@ export function EmployeesSection() {
         )}
       </div>
 
-      <Dialog
-        open={!!editTarget}
-        onOpenChange={(open) => {
-          if (!open) setEditTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("employees.edit")}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="employee-edit-name">{t("employees.nameLabel")}</Label>
-            <Input
-              id="employee-edit-name"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setEditTarget(null)}
-            >
-              {t("employees.cancel")}
-            </Button>
-            <Button
-              type="button"
-              onClick={onSaveEdit}
-              disabled={updateMutation.isPending}
-            >
-              {t("employees.save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {createOpen ? (
+        <Dialog
+          open={createOpen}
+          onOpenChange={(open) => {
+            if (!open) setCreateOpen(false);
+          }}
+        >
+          <DialogContent data-testid="employees-create-dialog">
+            <DialogHeader>
+              <DialogTitle>{t("employees.createTitle")}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={onCreate} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="employees-name-input">
+                  {t("employees.nameLabel")}
+                </Label>
+                <Input
+                  id="employees-name-input"
+                  data-testid="employees-name-input"
+                  value={name}
+                  placeholder={t("employees.namePlaceholder")}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setNameError(null);
+                  }}
+                  aria-invalid={!!nameError}
+                  autoFocus
+                />
+              </div>
+              {nameError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {nameError}
+                </p>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCreateOpen(false)}
+                >
+                  {t("employees.cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  data-testid="employees-add-button"
+                  disabled={createMutation.isPending}
+                >
+                  {t("employees.save")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {editTarget ? (
+        <Dialog
+          open={!!editTarget}
+          onOpenChange={(open) => {
+            if (!open) setEditTarget(null);
+          }}
+        >
+          <DialogContent data-testid="employees-edit-dialog">
+            <DialogHeader>
+              <DialogTitle>{t("employees.editTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="employee-edit-name">
+                {t("employees.nameLabel")}
+              </Label>
+              <Input
+                id="employee-edit-name"
+                data-testid="employees-name-input"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditTarget(null)}
+              >
+                {t("employees.cancel")}
+              </Button>
+              <Button
+                type="button"
+                onClick={onSaveEdit}
+                disabled={updateMutation.isPending}
+              >
+                {t("employees.save")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       <AlertDialog
         open={!!deleteTarget}
@@ -214,7 +267,9 @@ export function EmployeesSection() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("employees.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("employees.deleteConfirmTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("employees.deleteConfirmBody")}
             </AlertDialogDescription>

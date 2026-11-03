@@ -111,6 +111,17 @@ export const api = {
       `/api/time-entries?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     ).then((r) => r.data),
 
+  createTimeEntry: (input: {
+    employeeId: string;
+    description: string;
+    start: string;
+    stop?: string | null;
+  }) =>
+    request<TimeEntry>("/api/time-entries", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }).then((r) => r.data),
+
   updateTimeEntry: (
     id: string,
     patch: Partial<{

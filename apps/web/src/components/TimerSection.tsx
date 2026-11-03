@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,15 +35,36 @@ import {
   setHideConfirmDone,
   setPreferCollapsed,
 } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 768px)").matches
+      : true,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return isDesktop;
+}
 
 export function TimerSection() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const isDesktop = useIsDesktop();
   const [employeeId, setEmployeeId] = useState("");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [alreadyRunningError, setAlreadyRunningError] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isPreferCollapsed());
+  const [idleExpanded, setIdleExpanded] = useState(true);
   const [hideConfirmOpen, setHideConfirmOpen] = useState(false);
   const [a11yMessage, setA11yMessage] = useState("");
 
@@ -67,13 +89,16 @@ export function TimerSection() {
 
   const elapsed = useElapsed(selectedRunning?.start);
   const isRunning = !!selectedRunning;
+  const selectedEmployeeName =
+    employees.find((e) => e.id === employeeId)?.name ?? "";
 
   useEffect(() => {
     if (!isRunning) {
       setCollapsed(false);
       setPreferCollapsed(false);
+      setIdleExpanded(isDesktop);
     }
-  }, [isRunning]);
+  }, [isRunning, isDesktop]);
 
   useEffect(() => {
     if (isRunning && isPreferCollapsed() && isHideConfirmDone()) {
@@ -95,8 +120,18 @@ export function TimerSection() {
     onSuccess: async () => {
       setAlreadyRunningError(false);
       setFormError(null);
-      setCollapsed(false);
-      setPreferCollapsed(false);
+      setIdleExpanded(true);
+      // Desktop stays expanded; mobile prefers compact chip after Start
+      if (
+        typeof window !== "undefined" &&
+        !window.matchMedia("(min-width: 768px)").matches
+      ) {
+        setCollapsed(true);
+        setPreferCollapsed(true);
+      } else {
+        setCollapsed(false);
+        setPreferCollapsed(false);
+      }
       setA11yMessage(t("timer.a11y.started"));
       await invalidateTimerQueries();
     },
@@ -121,6 +156,7 @@ export function TimerSection() {
       setCollapsed(false);
       setPreferCollapsed(false);
       setAlreadyRunningError(false);
+      setIdleExpanded(isDesktop);
       setA11yMessage(t("timer.a11y.stopped"));
       await invalidateTimerQueries();
     },
@@ -164,168 +200,228 @@ export function TimerSection() {
     stopMutation.mutate();
   }
 
-  const showExpandedElapsed = isRunning && !collapsed;
   const showCollapsed = isRunning && collapsed;
+  const showExpandedPanel =
+    (isRunning && !collapsed) || (!isRunning && idleExpanded);
+  const showIdleLauncher = !isRunning && !idleExpanded;
+
+  const shellClass =
+    "fixed bottom-4 right-4 z-50 w-[min(22rem,calc(100vw-2rem))] pb-[env(safe-area-inset-bottom)]";
 
   return (
-    <section id="timer" aria-labelledby="timer-heading" className="flex flex-col gap-4">
-      <h2 id="timer-heading" className="text-xl font-semibold">
-        {t("timer.title")}
-      </h2>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="timer-employee-select">{t("timer.employeeLabel")}</Label>
-          <Select
-            value={employeeId || undefined}
-            onValueChange={(value) => {
-              setEmployeeId(value ?? "");
-              setAlreadyRunningError(false);
-              setFormError(null);
-            }}
-            disabled={employees.length === 0}
-          >
-            <SelectTrigger
-              id="timer-employee-select"
-              data-testid="timer-employee-select"
-              className="w-full max-w-md"
-            >
-              <SelectValue placeholder={t("timer.employeePlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((employee) => (
-                <SelectItem key={employee.id} value={employee.id}>
-                  {employee.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {employees.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              <a href="#employees" className="underline underline-offset-2">
-                {t("timer.hints.needEmployee")}
-              </a>
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="timer-description-input">
-            {t("timer.descriptionLabel")}
-          </Label>
-          <Input
-            id="timer-description-input"
-            data-testid="timer-description-input"
-            value={description}
-            placeholder={t("timer.descriptionPlaceholder")}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              setFormError(null);
-            }}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+    <>
+      <div className={shellClass}>
+        {showIdleLauncher ? (
           <Button
             type="button"
-            data-testid="timer-start-button"
-            onClick={onStart}
-            disabled={startMutation.isPending || employees.length === 0}
+            data-testid="timer-launcher"
+            className="min-h-11 shadow-lg"
+            aria-label={t("timer.launcher.open")}
+            onClick={() => setIdleExpanded(true)}
           >
-            {t("timer.start")}
+            {t("timer.chip.idle")}
           </Button>
-          {showExpandedElapsed ? (
-            <>
+        ) : null}
+
+        {showCollapsed ? (
+          <div
+            data-testid="timer-collapsed"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 shadow-lg"
+            aria-label={`${selectedEmployeeName} ${elapsed}`}
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-sm font-medium">
+                {selectedEmployeeName || t("timer.collapsedLabel")}
+              </span>
+              <span
+                data-testid="timer-elapsed"
+                className="font-mono text-lg tabular-nums"
+                aria-live="off"
+              >
+                {elapsed}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                data-testid="timer-restore-button"
+                className="min-h-11 min-w-11"
+                aria-label={t("timer.a11y.expand")}
+                onClick={() => {
+                  setCollapsed(false);
+                  setPreferCollapsed(false);
+                }}
+              >
+                {t("timer.restore")}
+              </Button>
               <Button
                 type="button"
                 variant="secondary"
                 data-testid="timer-stop-button"
+                className="min-h-11 min-w-11"
                 onClick={() => stopMutation.mutate()}
                 disabled={stopMutation.isPending}
               >
                 {t("timer.stop")}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                data-testid="timer-hide-button"
-                onClick={onHideClick}
-              >
-                {t("timer.hide")}
-              </Button>
-            </>
-          ) : null}
-        </div>
-
-        {formError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {formError}
-          </p>
+            </div>
+          </div>
         ) : null}
-        {alreadyRunningError ? (
-          <p
-            data-testid="timer-already-running-error"
-            className="text-sm text-destructive"
-            role="alert"
+
+        {showExpandedPanel ? (
+          <section
+            id="timer"
+            data-testid="timer-panel"
+            aria-labelledby="timer-heading"
+            className={cn(
+              "flex flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg",
+            )}
           >
-            {t("timer.errors.alreadyRunning")}
-          </p>
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="timer-heading" className="text-base font-semibold">
+                {t("timer.panel.title")}
+              </h2>
+              {!isRunning ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t("timer.a11y.collapse")}
+                  onClick={() => setIdleExpanded(false)}
+                >
+                  −
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="timer-employee-select">
+                  {t("timer.employeeLabel")}
+                </Label>
+                <Select
+                  value={employeeId || undefined}
+                  onValueChange={(value) => {
+                    setEmployeeId(value ?? "");
+                    setAlreadyRunningError(false);
+                    setFormError(null);
+                  }}
+                  disabled={employees.length === 0}
+                >
+                  <SelectTrigger
+                    id="timer-employee-select"
+                    data-testid="timer-employee-select"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder={t("timer.employeePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {employees.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    <Link
+                      to="/employees"
+                      className="underline underline-offset-2"
+                    >
+                      {t("timer.hints.needEmployee")}
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="timer-description-input">
+                  {t("timer.descriptionLabel")}
+                </Label>
+                <Input
+                  id="timer-description-input"
+                  data-testid="timer-description-input"
+                  value={description}
+                  placeholder={t("timer.descriptionPlaceholder")}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    setFormError(null);
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  data-testid="timer-start-button"
+                  onClick={onStart}
+                  disabled={startMutation.isPending || employees.length === 0}
+                >
+                  {t("timer.start")}
+                </Button>
+                {isRunning ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-testid="timer-stop-button"
+                      onClick={() => stopMutation.mutate()}
+                      disabled={stopMutation.isPending}
+                    >
+                      {t("timer.stop")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      data-testid="timer-hide-button"
+                      onClick={onHideClick}
+                    >
+                      {t("timer.hide")}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+
+              {formError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {formError}
+                </p>
+              ) : null}
+              {alreadyRunningError ? (
+                <p
+                  data-testid="timer-already-running-error"
+                  className="text-sm text-destructive"
+                  role="alert"
+                >
+                  {t("timer.errors.alreadyRunning")}
+                </p>
+              ) : null}
+            </div>
+
+            {isRunning ? (
+              <div className="rounded-lg border bg-muted/40 px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  {t("timer.elapsedLabel")}
+                </p>
+                <p
+                  data-testid="timer-elapsed"
+                  className="font-mono text-2xl tabular-nums"
+                  aria-live="off"
+                >
+                  {elapsed}
+                </p>
+                {selectedRunning ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedRunning.description}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
         ) : null}
       </div>
-
-      {showExpandedElapsed ? (
-        <div className="rounded-lg border bg-muted/40 px-4 py-3">
-          <p className="text-sm text-muted-foreground">{t("timer.elapsedLabel")}</p>
-          <p
-            data-testid="timer-elapsed"
-            className="font-mono text-2xl tabular-nums"
-            aria-live="off"
-          >
-            {elapsed}
-          </p>
-          {selectedRunning ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selectedRunning.description}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {showCollapsed ? (
-        <div
-          data-testid="timer-collapsed"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3"
-        >
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">{t("timer.collapsedLabel")}</span>
-            <span className="font-mono text-lg tabular-nums">{elapsed}</span>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              data-testid="timer-restore-button"
-              className="min-h-11 min-w-11"
-              onClick={() => {
-                setCollapsed(false);
-                setPreferCollapsed(false);
-              }}
-            >
-              {t("timer.restore")}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              data-testid="timer-stop-button"
-              className="min-h-11 min-w-11"
-              onClick={() => stopMutation.mutate()}
-              disabled={stopMutation.isPending}
-            >
-              {t("timer.stop")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
 
       <div className="sr-only" aria-live="polite">
         {a11yMessage}
@@ -358,6 +454,6 @@ export function TimerSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   );
 }

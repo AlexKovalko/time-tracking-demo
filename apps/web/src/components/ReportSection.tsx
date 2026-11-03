@@ -160,9 +160,9 @@ export function ReportSection() {
   return (
     <section id="report" aria-labelledby="report-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 id="report-heading" className="text-xl font-semibold">
+        <h1 id="report-heading" className="text-xl font-semibold">
           {t("report.title")}
-        </h2>
+        </h1>
         <Button
           type="button"
           data-testid="report-export-button"

@@ -1,7 +1,17 @@
 import { MoonIcon, SunIcon } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    "inline-flex h-8 items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors",
+    isActive
+      ? "bg-primary text-primary-foreground"
+      : "border border-border bg-background text-foreground hover:bg-muted",
+  );
 
 export function AppChrome() {
   const { t, locale, setLocale } = useI18n();
@@ -10,7 +20,41 @@ export function AppChrome() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <h1 className="text-lg font-semibold tracking-tight">{t("app.title")}</h1>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <NavLink
+            to="/employees"
+            className="truncate text-lg font-semibold tracking-tight text-foreground"
+          >
+            {t("app.title")}
+          </NavLink>
+          <nav
+            className="flex flex-wrap items-center gap-1.5"
+            aria-label={t("nav.aria")}
+          >
+            <NavLink
+              to="/employees"
+              data-testid="nav-employees"
+              className={navLinkClass}
+              end
+            >
+              {t("nav.employees")}
+            </NavLink>
+            <NavLink
+              to="/entries"
+              data-testid="nav-entries"
+              className={navLinkClass}
+            >
+              {t("nav.entries")}
+            </NavLink>
+            <NavLink
+              to="/report"
+              data-testid="nav-report"
+              className={navLinkClass}
+            >
+              {t("nav.report")}
+            </NavLink>
+          </nav>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             type="button"

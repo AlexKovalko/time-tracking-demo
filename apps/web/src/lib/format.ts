@@ -62,3 +62,59 @@ export function fromDatetimeLocalValue(value: string): string {
   const d = new Date(value);
   return d.toISOString();
 }
+
+/** Monday of the ISO week containing `date` (local calendar). */
+export function startOfIsoWeek(date = new Date()): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+export function addDays(date: Date, days: number): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export function toIsoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Local calendar date (YYYY-MM-DD) of an ISO timestamp. */
+export function localIsoDateFromTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return iso.slice(0, 10);
+  }
+  return toIsoDate(d);
+}
+
+/** Human week label, e.g. "3 – 9 Nov 2026". */
+export function formatWeekPeriodLabel(weekStart: Date, locale: string): string {
+  const weekEnd = addDays(weekStart, 6);
+  const sameMonth =
+    weekStart.getMonth() === weekEnd.getMonth() &&
+    weekStart.getFullYear() === weekEnd.getFullYear();
+  if (sameMonth) {
+    const monthYear = weekEnd.toLocaleDateString(locale, {
+      month: "short",
+      year: "numeric",
+    });
+    return `${weekStart.getDate()} – ${weekEnd.getDate()} ${monthYear}`;
+  }
+  const startLabel = weekStart.toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+  });
+  const endLabel = weekEnd.toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return `${startLabel} – ${endLabel}`;
+}
