@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+apps/api/data/
+*.sqlite
+*.db

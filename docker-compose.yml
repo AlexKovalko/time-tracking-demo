@@ -1,0 +1,58 @@
+# falconai — API (NestJS + SQLite volume) + nginx (static React UI, /api proxy).
+# Host ports: API 3000, UI 8081→80. Keep UI on 8081 — host :8080 is often taken
+# by unrelated nginx (returns 403). E2E: WEB_BASE_URL=http://localhost:8081
+name: falconai
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "3000"
+      # Persist DB on named volume (AC-11). Override via .env if needed.
+      SQLITE_PATH: /data/falconai.sqlite
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
+    volumes:
+      - sqlite_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/employees').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      # Published host port 8081 → container :80 (nginx). Do not map 8080 by default.
+      - "8081:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  # Named volume keeps employees + time entries (incl. running) across compose restarts.
+  sqlite_data:
+    name: falconai_sqlite_data

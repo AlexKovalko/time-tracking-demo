@@ -1,0 +1,25 @@
+# Keep image builds lean; context is repo root for both Dockerfiles.
+.git
+.cursor
+**/node_modules
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
+**/blob-report
+**/.playwright
+**/*.log
+**/.DS_Store
+**/*.sqlite
+**/*.sqlite-*
+**/*.db
+.env
+.env.*
+!.env.example
+apps/api/data
+docs
+tests
+playwright-report
+test-results
+*.md
+!apps/**/README.md

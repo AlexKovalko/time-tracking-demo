@@ -1,0 +1,22 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 10+: build scripts must be allowlisted here (package.json "pnpm" field is ignored).
+# Equivalent intent to classic onlyBuiltDependencies.
+onlyBuiltDependencies:
+  - "@nestjs/core"
+  - "@swc/core"
+  - esbuild
+  - better-sqlite3
+  - sqlite3
+
+allowBuilds:
+  "@swc/core": true
+  esbuild: true
+  "@nestjs/core": true
+  better-sqlite3: true
+  sqlite3: true
+
+shamefullyHoist: true
+strictPeerDependencies: false

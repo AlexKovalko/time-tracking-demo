@@ -1,0 +1,25 @@
+{
+  "name": "falconai",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Employee time-tracking greenfield monorepo (falconai)",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test:api": "vitest run --config tests/api/vitest.config.ts",
+    "test:api:watch": "vitest --config tests/api/vitest.config.ts",
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config tests/e2e/playwright.config.ts --ui",
+    "test:structure": "vitest run --config tests/structure/vitest.config.ts",
+    "test:qa": "pnpm run test:structure && pnpm run test:api && pnpm run test:e2e",
+    "playwright:install": "pnpm exec playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.9.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
