@@ -5,7 +5,7 @@
 **Product slug:** `time-tracking-demo`  
 **Project:** Time Tracking Demo (`time-tracking-demo`) — **not Queply**  
 **Product:** [`product.md`](./product.md) (BA — **AC-1…AC-32**)  
-**UX:** [`ux.md`](./ux.md) (ui-ux — pending #19)  
+**UX:** [`ux.md`](./ux.md) (ui-ux — done; handoff on #18)  
 **Predecessors:**
 - baseline `time-tracking` — [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)
 - UI shell `time-tracking-ui` — [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)
