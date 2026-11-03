@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Trash2Icon } from "lucide-react";
+import { RowIconActions } from "@/components/RowIconActions";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,7 @@ import {
   toDatetimeLocalValue,
   toIsoDate,
 } from "@/lib/format";
+import { colorForKey } from "@/lib/colors";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +69,63 @@ function yToDate(day: Date, clientY: number, top: number): Date {
   const result = new Date(day.getFullYear(), day.getMonth(), day.getDate());
   result.setMinutes(Math.round(totalMinutes));
   return snapMinutes(result, 15);
+}
+
+
+type OverlapLayout = { column: number; columns: number };
+
+/** Assign side-by-side columns for overlapping entries (AC-38). */
+function computeOverlapLayout(entries: TimeEntry[]): Map<string, OverlapLayout> {
+  const items = entries
+    .map((e) => ({
+      id: e.id,
+      start: new Date(e.start).getTime(),
+      end: e.stop ? new Date(e.stop).getTime() : Date.now(),
+    }))
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const result = new Map<string, OverlapLayout>();
+  let cluster: typeof items = [];
+  let clusterEnd = 0;
+
+  const flush = () => {
+    if (cluster.length === 0) return;
+    const colEnds: number[] = [];
+    const assignments: Array<{ id: string; col: number }> = [];
+    for (const item of cluster) {
+      let col = colEnds.findIndex((end) => end <= item.start);
+      if (col === -1) {
+        col = colEnds.length;
+        colEnds.push(item.end);
+      } else {
+        colEnds[col] = item.end;
+      }
+      assignments.push({ id: item.id, col });
+    }
+    const columns = Math.max(1, colEnds.length);
+    for (const a of assignments) {
+      result.set(a.id, { column: a.col, columns });
+    }
+    cluster = [];
+  };
+
+  for (const item of items) {
+    if (cluster.length === 0) {
+      cluster = [item];
+      clusterEnd = item.end;
+      continue;
+    }
+    if (item.start < clusterEnd) {
+      cluster.push(item);
+      clusterEnd = Math.max(clusterEnd, item.end);
+    } else {
+      flush();
+      cluster = [item];
+      clusterEnd = item.end;
+    }
+  }
+  flush();
+  return result;
 }
 
 export function EntriesSection() {
@@ -189,6 +249,18 @@ export function EntriesSection() {
   const listEmpty = view === "list" && !listQuery.isLoading && listTotal === 0;
   const calEmpty =
     view === "calendar" && !calQuery.isLoading && calEntries.length === 0;
+
+
+  useEffect(() => {
+    if (!deleteEntry) return;
+    const id = window.setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-testid="entries-delete-confirm"]')
+        ?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [deleteEntry]);
+  // Focus confirm when delete dialog opens (AC-42 Enter)
 
   async function invalidateEntries() {
     await Promise.all([
@@ -411,7 +483,11 @@ export function EntriesSection() {
     [employees],
   );
 
-  function blockStyle(entry: TimeEntry, day: Date): React.CSSProperties {
+  function blockStyle(
+    entry: TimeEntry,
+    day: Date,
+    layout?: OverlapLayout,
+  ): React.CSSProperties {
     const start = new Date(entry.start);
     const end = entry.stop
       ? new Date(entry.stop)
@@ -428,7 +504,23 @@ export function EntriesSection() {
       ((clippedEnd.getTime() - clippedStart.getTime()) / 3_600_000) *
         HOUR_HEIGHT,
     );
-    return { top, height };
+    const columns = layout?.columns ?? 1;
+    const column = layout?.column ?? 0;
+    const gapPct = 1;
+    const widthPct = (100 - gapPct * (columns + 1)) / columns;
+    const leftPct = gapPct + column * (widthPct + gapPct);
+    const fill = colorForKey(entry.employeeId);
+    return {
+      top,
+      height,
+      left: `${leftPct}%`,
+      width: `${widthPct}%`,
+      right: "auto",
+      backgroundColor: fill,
+      borderColor: fill,
+      color: "var(--foreground)",
+      opacity: 0.92,
+    };
   }
 
   return (
@@ -703,24 +795,12 @@ export function EntriesSection() {
                           : formatDuration(entry.durationSeconds ?? 0, locale)}
                       </td>
                       <td className="px-3 py-2">
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEdit(entry)}
-                          >
-                            {t("entries.edit")}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setDeleteEntry(entry)}
-                          >
-                            {t("entries.delete")}
-                          </Button>
-                        </div>
+                        <RowIconActions
+                          editLabel={t("entries.edit")}
+                          deleteLabel={t("entries.delete")}
+                          onEdit={() => openEdit(entry)}
+                          onDelete={() => setDeleteEntry(entry)}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -797,6 +877,7 @@ export function EntriesSection() {
               const dayEntries = calEntries.filter(
                 (e) => localIsoDateFromTimestamp(e.start) === dayKey,
               );
+              const overlap = computeOverlapLayout(dayEntries);
               return (
                 <div
                   key={dayKey}
@@ -837,15 +918,17 @@ export function EntriesSection() {
                       entry.stop == null
                         ? t("entries.running")
                         : formatDuration(entry.durationSeconds ?? 0, locale);
+                    const layout = overlap.get(entry.id);
                     return (
                       <button
                         key={entry.id}
                         type="button"
                         data-entry-block
+                        data-employee-id={entry.employeeId}
                         data-testid={`entries-calendar-block-${entry.id}`}
                         title={`${name} · ${entry.description} · ${dur}`}
-                        className="absolute inset-x-0.5 z-10 overflow-hidden rounded border bg-primary/15 px-1 py-0.5 text-left text-[10px] leading-tight hover:bg-primary/25"
-                        style={blockStyle(entry, day)}
+                        className="absolute z-10 overflow-hidden rounded border px-1 py-0.5 text-left text-[10px] leading-tight shadow-sm hover:brightness-95"
+                        style={blockStyle(entry, day, layout)}
                         onClick={(e) => {
                           e.stopPropagation();
                           openEdit(entry);
@@ -853,10 +936,10 @@ export function EntriesSection() {
                         onPointerDown={(e) => e.stopPropagation()}
                       >
                         <div className="truncate font-medium">{name}</div>
-                        <div className="truncate text-muted-foreground">
+                        <div className="truncate opacity-80">
                           {entry.description}
                         </div>
-                        <div className="tabular-nums">{dur}</div>
+                        <div className="tabular-nums opacity-80">{dur}</div>
                       </button>
                     );
                   })}
@@ -1043,7 +1126,17 @@ export function EntriesSection() {
           if (!open) setDeleteEntry(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent
+          data-testid="entries-delete-dialog"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            e.stopPropagation();
+            const id = deleteEntry?.id;
+            if (!id || deleteMutation.isPending) return;
+            deleteMutation.mutate(id);
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t("entries.deleteConfirmTitle")}
@@ -1057,6 +1150,7 @@ export function EntriesSection() {
             <Button
               type="button"
               variant="destructive"
+              data-testid="entries-delete-confirm"
               disabled={deleteMutation.isPending}
               onClick={() => {
                 const id = deleteEntry?.id;
@@ -1064,6 +1158,7 @@ export function EntriesSection() {
                 deleteMutation.mutate(id);
               }}
             >
+              <Trash2Icon data-icon="trash" className="size-4" />
               {t("entries.delete")}
             </Button>
           </AlertDialogFooter>
