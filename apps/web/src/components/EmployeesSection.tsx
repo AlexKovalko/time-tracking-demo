@@ -96,6 +96,8 @@ export function EmployeesSection() {
   const [editDept, setEditDept] = useState<Department | null>(null);
   const [editDeptName, setEditDeptName] = useState("");
   const [deleteDept, setDeleteDept] = useState<Department | null>(null);
+  const deleteDeptRef = useRef<Department | null>(null);
+  deleteDeptRef.current = deleteDept;
 
   const employeesQuery = useQuery({
     queryKey: queryKeys.employees(page, pageSize),
@@ -218,6 +220,22 @@ export function EmployeesSection() {
       }
     },
   });
+
+  // Enter confirms department delete (aligned with employee/entries AlertDialogs).
+  useEffect(() => {
+    if (!deleteDept) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const id = deleteDeptRef.current?.id;
+      if (!id) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setDeleteDept(null);
+      deleteDeptMutation.mutate(id);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [deleteDept]);
 
   function openCreate() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.departments });
@@ -815,8 +833,9 @@ export function EmployeesSection() {
             <AlertDialogCancel>{t("employees.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              autoFocus
               onClick={() => {
-                const id = deleteDept?.id;
+                const id = deleteDeptRef.current?.id ?? deleteDept?.id;
                 if (!id) return;
                 setDeleteDept(null);
                 deleteDeptMutation.mutate(id);

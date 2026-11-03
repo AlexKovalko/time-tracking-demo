@@ -75,7 +75,7 @@ export function EmployeeCombobox({
     placeholder ?? t("combobox.employee.placeholder");
 
   // allowAll + value "all" = implicit all-employees filter; keep input empty
-  // (do not paint entries.filter.employeeAll as committed label or list option).
+  // (do not paint an "all employees" label as committed value or list option).
   const committedLabel = value === "all" ? "" : selectedLabel;
 
   const isBrowsingCommitted =

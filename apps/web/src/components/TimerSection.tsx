@@ -110,6 +110,20 @@ export function TimerSection() {
     return () => window.removeEventListener("keydown", onKey);
   }, [panelOpen]);
 
+  // Product decision (#120): Enter on hide-confirm activates Hide (autoFocus /
+  // primary keep-running action), not End session. Esc still dismisses via dialog.
+  useEffect(() => {
+    if (!hideConfirmOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onHideConfirmHide();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [hideConfirmOpen]);
+
   async function invalidateTimerQueries() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.activeTimers }),
