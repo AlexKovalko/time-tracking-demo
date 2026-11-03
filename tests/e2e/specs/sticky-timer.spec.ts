@@ -3,27 +3,20 @@ import {
   expect,
   tid,
   byTestId,
-  createEmployeeUi,
-  startTimerUi,
   gotoEntries,
   gotoReport,
   gotoEmployees,
   timerChromeRoot,
-  ensureTimerExpanded,
 } from "../fixtures";
 
 /**
  * AC-3 (#34) complement — timer chrome persists across routes (FAB era).
- * Supersedes always-expanded sticky from time-tracking-ui.
+ * Position smoke only; running badge / hide-restore covered by timer-fab + hide-restore specs.
  */
 test.describe("AC-3 · FAB timer across routes (#34)", () => {
   test("FAB/timer chrome stays bottom-right on Employees / Entries / Report", async ({
     openApp: page,
   }) => {
-    const name = `QA Sticky ${Date.now()}`;
-    await createEmployeeUi(page, name);
-    await startTimerUi(page, name, "Sticky across routes");
-
     const assertChrome = async () => {
       const root = timerChromeRoot(page);
       await expect(root).toBeVisible();
@@ -42,9 +35,6 @@ test.describe("AC-3 · FAB timer across routes (#34)", () => {
     await assertChrome();
     await gotoEmployees(page);
     await assertChrome();
-
-    await ensureTimerExpanded(page);
-    await byTestId(page, tid.timerStopButton).click();
-    await expect(byTestId(page, tid.timerElapsed)).toHaveCount(0);
+    await expect(byTestId(page, tid.timerFab)).toBeVisible();
   });
 });

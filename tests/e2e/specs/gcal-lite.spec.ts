@@ -125,18 +125,18 @@ test.describe("AC-5…10 · GCal-lite (#36–#41)", () => {
     const blocks = page.locator("[data-testid^='entries-calendar-block-']");
     await expect(blocks.first()).toBeVisible({ timeout: 15_000 });
 
-    // Dense seed stacks overlapping blocks; force avoids actionability timeout on covered peers.
-    const target = blocks.filter({ hasText: /\S/ }).first();
+    // Dense seed stacks overlapping blocks — DOM click bypasses hit-testing.
+    const target = blocks.filter({ hasText: /[A-Za-zА-Яа-я]{3,}/ }).nth(1);
+    await expect(target).toBeVisible({ timeout: 10_000 });
     await target.scrollIntoViewIfNeeded();
-    await target.click({ force: true });
+    await target.evaluate((el: HTMLElement) => el.click());
     const editDialog = page.getByRole("dialog");
     await expect(editDialog).toBeVisible({ timeout: 10_000 });
-    // Prefer UX testid when present; role fallback for older builds.
-    await expect(
-      editDialog
-        .getByTestId(tid.entriesEditSave)
-        .or(editDialog.getByRole("button", { name: /сохранить|save/i })),
-    ).toBeVisible({ timeout: 10_000 });
+    // Must be edit (not create): entries-edit-save only exists on edit footer.
+    await expect(byTestId(page, tid.entriesEditSave)).toBeVisible({
+      timeout: 10_000,
+    });
+    await editDialog.getByRole("button", { name: /отмена|cancel/i }).click();
   });
 
   test("Calendar | List toggle and empty states (AC-10 #41)", async ({

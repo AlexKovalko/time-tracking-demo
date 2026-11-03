@@ -307,29 +307,35 @@ export async function createEmployeeUi(
   }
   await expect(dialog).toHaveCount(0, { timeout: 15_000 });
 
-  // FE jumps to the page with the new employee after create; walk pages if needed.
+  // Ensure people tab + fresh list (FE may still be on Departments or a stale page).
+  await gotoEmployees(page);
+  const peopleTab = byTestId(page, tid.employeesTabPeople);
+  if (await peopleTab.isVisible().catch(() => false)) {
+    await peopleTab.click();
+  }
   const list = byTestId(page, tid.employeesList);
-  await expect
-    .poll(
-      async () => {
-        if ((await list.innerText()).includes(name)) return true;
-        const pagination = byTestId(page, tid.employeesPagination);
-        if ((await pagination.count()) === 0) return false;
-        let next = byTestId(page, tid.employeesPaginationNext);
-        if ((await next.count()) === 0) {
-          next = pagination.getByRole("button").nth(1);
-        }
-        if ((await next.count()) === 0) return false;
-        const disabled = await next
-          .isDisabled({ timeout: 1_000 })
-          .catch(() => true);
-        if (disabled) return false;
-        await next.click();
-        return (await list.innerText()).includes(name);
-      },
-      { timeout: 20_000, intervals: [200, 400, 800] },
-    )
-    .toBe(true);
+  const findOnPages = async (): Promise<boolean> => {
+    if ((await list.innerText()).includes(name)) return true;
+    const pagination = byTestId(page, tid.employeesPagination);
+    if ((await pagination.count()) === 0) return false;
+    for (let i = 0; i < 40; i += 1) {
+      const prev = byTestId(page, tid.employeesPaginationPrev);
+      if ((await prev.count()) === 0 || (await prev.isDisabled().catch(() => true))) {
+        break;
+      }
+      await prev.click();
+    }
+    for (let i = 0; i < 40; i += 1) {
+      if ((await list.innerText()).includes(name)) return true;
+      const next = byTestId(page, tid.employeesPaginationNext);
+      if ((await next.count()) === 0 || (await next.isDisabled().catch(() => true))) {
+        break;
+      }
+      await next.click();
+    }
+    return (await list.innerText()).includes(name);
+  };
+  await expect.poll(findOnPages, { timeout: 30_000, intervals: [400, 800, 1200] }).toBe(true);
   await expect(list).toContainText(name, { timeout: 5_000 });
 }
 

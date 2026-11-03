@@ -19,8 +19,8 @@ test.describe("AC-24…26 · employee profile (#55–#57)", () => {
     const list = byTestId(page, tid.employeesList);
     await expect(list).toBeVisible();
 
-    // Prefer explicit profile link; else first row click
-    const profileLink = page.getByRole("link", { name: /профиль|profile/i });
+    // Prefer explicit Profile action (exact) — names like "API Profile …" match /profile/i.
+    const profileLink = page.getByRole("link", { name: /^(профиль|profile)$/i });
     if (await profileLink.count()) {
       await profileLink.first().click();
     } else {
@@ -49,10 +49,16 @@ test.describe("AC-24…26 · employee profile (#55–#57)", () => {
         hasText: /[А-ЯЁа-яё]{3,}/,
       });
       if ((await seedRow.count()) > 0) {
-        await seedRow
-          .first()
-          .getByRole("link", { name: /профиль|profile/i })
-          .click();
+        // Prefer the explicit Profile action — employee-name is also a link to /employees/:id
+        const row = seedRow.first();
+        const profileAction = row.getByRole("link", {
+          name: /^(профиль|profile)$/i,
+        });
+        if ((await profileAction.count()) > 0) {
+          await profileAction.click();
+        } else {
+          await row.getByTestId("employee-name").click();
+        }
         opened = true;
         break;
       }
@@ -62,22 +68,43 @@ test.describe("AC-24…26 · employee profile (#55–#57)", () => {
       await expect(list).toBeVisible();
     }
     if (!opened) {
-      await page.getByRole("link", { name: /профиль|profile/i }).first().click();
+      await page.getByRole("link", { name: /^(профиль|profile)$/i }).first().click();
+    }
+
+    await expect(byTestId(page, tid.employeeProfile)).toBeVisible({
+      timeout: 15_000,
+    });
+    // AC-25: non-zero on seed when period is suitable (dense 2–4 weeks)
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 28);
+    await byTestId(page, tid.employeeProfileFilterFrom).fill(
+      from.toISOString().slice(0, 10),
+    );
+    await byTestId(page, tid.employeeProfileFilterTo).fill(
+      to.toISOString().slice(0, 10),
+    );
+    const apply = page.getByRole("button", {
+      name: /применить|apply|показать|show/i,
+    });
+    if (await apply.count()) {
+      await apply.click();
     }
 
     const stats = byTestId(page, tid.employeeProfileStats);
     await expect(stats).toBeVisible({ timeout: 15_000 });
-    const text = await stats.innerText();
-    expect(text.length).toBeGreaterThan(0);
-    // On seed with suitable default period — non-zero duration or count
-    expect(text).toMatch(/\d/);
+    await expect
+      .poll(async () => (await stats.innerText()).trim(), {
+        timeout: 15_000,
+      })
+      .toMatch(/\d/);
   });
 
   test("profile entries filters period + description (AC-26 #57)", async ({
     openApp: page,
   }) => {
     await gotoEmployees(page);
-    const profileLink = page.getByRole("link", { name: /профиль|profile/i });
+    const profileLink = page.getByRole("link", { name: /^(профиль|profile)$/i });
     if (await profileLink.count()) {
       await profileLink.first().click();
     } else {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createEmployee,
+  createTimeEntry,
   deleteEmployee,
   emptyReportWindow,
   exportReportCsv,
@@ -37,12 +38,20 @@ describe("API · reports (AC-8, AC-9, AC-10, AC-18)", () => {
     const { body } = await createEmployee(name);
     const employee = body as { id: string };
 
-    await startTimer({ employeeId: employee.id, description: "Reportable" });
-    // Brief sleep so durationSeconds > 0
-    await new Promise((r) => setTimeout(r, 1100));
-    await stopTimer({ employeeId: employee.id });
-
+    // Closed entry with explicit duration — avoids flake when external clearActiveTimers
+    // stops a live timer within the same wall-clock second (durationSeconds → 0).
     const day = todayIsoDate();
+    const start = `${day}T10:00:00.000Z`;
+    const stop = `${day}T11:00:00.000Z`;
+    const created = await createTimeEntry({
+      employeeId: employee.id,
+      description: "Reportable",
+      start,
+      stop,
+    });
+    expect(created.status).toBeGreaterThanOrEqual(200);
+    expect(created.status).toBeLessThan(300);
+
     const entries = await listTimeEntries(day, day);
     expect(entries.some((e) => e.description === "Reportable")).toBe(true);
 
