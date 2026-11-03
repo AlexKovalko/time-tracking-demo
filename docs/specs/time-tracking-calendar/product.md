@@ -10,7 +10,7 @@
 
 **UI port:** Compose / preview **:8081** (никогда :8080)  
 **Статус решений:** planning — defaults **locked** ниже (критический grill не нужен; portfolio scope)  
-**Scope amend (2026-11-03):** departments + employee profile + charts — **AC-20+** appended; **AC-1…AC-19** без перенумерации.
+**Scope amend (2026-11-03):** departments + employee profile + charts — **AC-20…30**; duration/interval display — **AC-31…32**; **AC-1…AC-19** без перенумерации.
 
 ## Intent
 
@@ -314,6 +314,26 @@
 - **AC-29.** Пустой / без данных период для charts → **empty state**, не crash; существующие табличный Report + CSV остаются (non-regression AC-16/18).
 - **AC-30.** Force reseed (AC-17) также пересоздаёт **departments**, profile fields и объём entries, **достаточный для AC-27/28** (усиливает AC-15/16 без смены их ID): dense distribution across days/weeks **и** across employees/departments.
 
+
+### Длительность и интервалы (display format)
+
+- **AC-31.** Везде, где UI (и human-readable CSV/API display, если есть) показывает **длительность**, используется единый формат через **одну shared util** (FE + unit tests; BE — та же логика если отдаёт human-readable):
+  - примеры: `48ч` · `4ч 20м` · `2м 5с`;
+  - **ru:** суффиксы `ч` / `м` / `с`; **en:** `h` / `m` / `s`;
+  - пропускать нулевые старшие/средние части осмысленно: нет `0ч`; ровно N часов без минут/секунд → только часы (`48ч` / `48h`); при наличии минут/секунд без часов — без часовой части (`2м 5с` / `2m 5s`);
+  - не показывать пустую строку для нулевой длительности — eng: `0с` / `0s` (или `0м` если округление до минут задокументировано в handoff).
+- **AC-32.** **Интервал** start–end в UI (календарь, list, profile, report где показывается диапазон) через shared formatter:
+  - **same calendar day (strict):** две строки —
+    ```
+    DD.MM.YYYY,
+    HH:mm - HH:mm
+    ```
+    (дата с запятой на первой строке; время `HH:mm - HH:mm` на второй). Locale **ru** (default): `DD.MM.YYYY`. Locale **en:** `MM/DD/YYYY` + same newline time line (не ISO в UI).
+  - **different calendar days:** одна компактная строка (или две строки без ломания same-day контракта):
+    `DD.MM.YYYY HH:mm – DD.MM.YYYY HH:mm` (ru) / `MM/DD/YYYY HH:mm – MM/DD/YYYY HH:mm` (en); en-date order как выше.
+  - Running entry без end: показывать start date/time + индикатор running / `…` — не выдумывать end; eng документирует точную строку в handoff.
+  - QA asserts same-day layout (newline + comma) и locale suffixes for duration.
+
 ---
 
 ## Вне scope (явно) / follow-ups
@@ -359,7 +379,10 @@
 | Charts | **2 surfaces:** hours over time (day\|week) + breakdown (employees\|departments) |
 | UI port | **:8081** |
 | Grill | Не блокирует — defaults locked |
-| AC numbering | **AC-1…19 intact**; amend = **AC-20…30** |
+| AC numbering | **AC-1…19 intact**; amend = **AC-20…30**; display = **AC-31…32** |
+| Duration display | Shared util; ru `ч/м/с`, en `h/m/s`; skip zero higher parts |
+| Interval same-day | `DD.MM.YYYY,` + newline + `HH:mm - HH:mm` (en date `MM/DD/YYYY`) |
+| Interval cross-day | `date HH:mm – date HH:mm` with locale date order |
 
 ## Открытые вопросы
 
@@ -378,5 +401,5 @@
 - **Спека:** `docs/specs/time-tracking-calendar/product.md` (**scope amend** — обновить `agent.md` + AC map + API contract)
 - **PM:** amend `agent.md` (departments, profile, charts, AC-20…30); ui-ux #19 ещё не стартовал — учесть в brief
 - **Ожидаемый cast (может быть amended PM):** `ui-ux → qa write → backend-dev ∥ frontend-dev → qa verify → devops`
-- **AC:** **AC-1…AC-30** (1–19 stable; 20–30 amend)
+- **AC:** **AC-1…AC-32** (1–19 stable; 20–30 amend)
 - **Следующий:** **pm**
