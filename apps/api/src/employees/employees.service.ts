@@ -49,16 +49,26 @@ export class EmployeesService {
     return this.queryEmployees();
   }
 
-  findPage(page?: number, limit?: number): Paginated<Employee> {
+  findPage(page?: number, limit?: number, q?: string): Paginated<Employee> {
     const p = clampPage(page);
     const l = clampPageLimit(limit);
+    const needle = q?.trim() ?? '';
+    const nameFilter =
+      needle.length > 0 ? `%${needle.toLocaleLowerCase('en-US')}%` : null;
+
+    let countSql = 'SELECT COUNT(*) AS c FROM employees';
+    const countParams: string[] = [];
+    if (nameFilter != null) {
+      countSql += ' WHERE unicode_lower(name) LIKE ?';
+      countParams.push(nameFilter);
+    }
     const total = (
-      this.database.connection
-        .prepare('SELECT COUNT(*) AS c FROM employees')
-        .get() as { c: number }
+      this.database.connection.prepare(countSql).get(...countParams) as {
+        c: number;
+      }
     ).c;
     const offset = (p - 1) * l;
-    const items = this.queryEmployees(l, offset);
+    const items = this.queryEmployees(l, offset, nameFilter);
     return { items, total, page: p, limit: l };
   }
 
@@ -163,15 +173,23 @@ export class EmployeesService {
     return departmentId;
   }
 
-  private queryEmployees(limit?: number, offset?: number): Employee[] {
+  private queryEmployees(
+    limit?: number,
+    offset?: number,
+    nameFilter?: string | null,
+  ): Employee[] {
     let sql = `
       SELECT e.id, e.name, e.department_id, e.title, e.email, e.phone,
              d.name AS department_name
       FROM employees e
       LEFT JOIN departments d ON d.id = e.department_id
-      ORDER BY e.name COLLATE NOCASE ASC
     `;
-    const params: number[] = [];
+    const params: Array<string | number> = [];
+    if (nameFilter != null) {
+      sql += ' WHERE unicode_lower(e.name) LIKE ?';
+      params.push(nameFilter);
+    }
+    sql += ' ORDER BY e.name COLLATE NOCASE ASC';
     if (limit != null) {
       sql += ' LIMIT ? OFFSET ?';
       params.push(limit, offset ?? 0);

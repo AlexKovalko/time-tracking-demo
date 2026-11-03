@@ -270,3 +270,85 @@ export function formatWeekBucketLabel(
 
 /** Alias kept for callers that prefer the shorter name. */
 export const formatWeekBucket = formatWeekBucketLabel;
+
+function parseLocalDay(day: Date | string): Date {
+  if (day instanceof Date) {
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(day)) {
+    const [y, m, d] = day.slice(0, 10).split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const parsed = new Date(day);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+  return new Date();
+}
+
+/** Compact day X-axis tick: DD.MM (no year). */
+export function formatDayAxisTick(day: Date | string): string {
+  const d = parseLocalDay(day);
+  return `${padDatePart(d.getDate())}.${padDatePart(d.getMonth() + 1)}`;
+}
+
+/** Compact week X-axis tick: ISO week number only (e.g. "44"). */
+export function formatWeekAxisTick(weekStart: Date | string): string {
+  if (typeof weekStart === "string") {
+    const isoWeek = weekStart.match(/^(\d{4})-W(\d{1,2})$/i);
+    if (isoWeek) {
+      return String(Number(isoWeek[2]));
+    }
+  }
+  return String(isoWeekNumber(parseWeekStart(weekStart)));
+}
+
+const NICE_HOUR_STEPS = [
+  0.25, 0.5, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 36, 48,
+];
+
+/**
+ * Y-axis duration tick values from 0..maxSeconds with readable hour steps.
+ */
+export function durationAxisTicks(
+  maxSeconds: number,
+  maxTicks = 5,
+): number[] {
+  const safeMax = Math.max(0, Math.floor(maxSeconds));
+  if (safeMax === 0) {
+    return [0];
+  }
+  const maxHours = safeMax / 3600;
+  const roughStep = maxHours / Math.max(1, maxTicks - 1);
+  const stepHours =
+    NICE_HOUR_STEPS.find((h) => h >= roughStep) ?? Math.ceil(roughStep);
+  const step = stepHours * 3600;
+  const ticks: number[] = [];
+  for (let t = 0; t < safeMax; t += step) {
+    ticks.push(t);
+  }
+  if (ticks[ticks.length - 1] !== safeMax) {
+    ticks.push(safeMax);
+  }
+  return ticks;
+}
+
+/** Short hour/duration label for Y-axis scale (e.g. "4ч" / "4h"). */
+export function formatDurationAxisTick(
+  totalSeconds: number,
+  locale: string = "ru",
+): string {
+  const lang = normalizeLocale(locale);
+  const s = DURATION_SUFFIX[lang];
+  const safe = Math.max(0, totalSeconds);
+  const hours = safe / 3600;
+  if (
+    safe === 0 ||
+    Number.isInteger(hours) ||
+    Math.abs(hours - Math.round(hours)) < 1e-6
+  ) {
+    return `${Math.round(hours)}${s.hours}`;
+  }
+  const rounded = Math.round(hours * 10) / 10;
+  return `${rounded}${s.hours}`;
+}

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class ListEmployeesQueryDto {
   @IsOptional()
@@ -14,4 +14,10 @@ export class ListEmployeesQueryDto {
   @Min(1)
   @Max(50)
   limit?: number;
+
+  /** Optional case-insensitive contains filter on employee name. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  q?: string;
 }

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -8,8 +9,11 @@ import {
 } from "react";
 import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Employee } from "@/lib/api";
+import { api, type Employee } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+
+const DEBOUNCE_MS = 280;
+const PAGE_LIMIT = 20;
 
 type Props = {
   /** Prefix for data-testid roots, e.g. entries-filter-employee */
@@ -17,12 +21,12 @@ type Props = {
   inputTestId?: string;
   listTestId?: string;
   clearTestId?: string;
-  employees: Employee[];
   /** Selected id, `"all"` (filter), or `""` (form empty). */
   value: string;
   onValueChange: (next: string) => void;
+  /** Fires when the resolved selected employee (or null) changes. */
+  onSelectedEmployeeChange?: (employee: Employee | null) => void;
   allowAll?: boolean;
-  isLoading?: boolean;
   disabled?: boolean;
   className?: string;
   placeholder?: string;
@@ -38,11 +42,10 @@ export function EmployeeCombobox({
   inputTestId,
   listTestId,
   clearTestId,
-  employees,
   value,
   onValueChange,
+  onSelectedEmployeeChange,
   allowAll = false,
-  isLoading = false,
   disabled = false,
   className,
   placeholder,
@@ -51,63 +54,189 @@ export function EmployeeCombobox({
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const fetchSeq = useRef(0);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  /** null = debounce not settled yet (no network fetch). */
+  const [debouncedQ, setDebouncedQ] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [options, setOptions] = useState<Employee[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [browseTotal, setBrowseTotal] = useState<number | null>(null);
+  const [selectionCache, setSelectionCache] = useState<Employee | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState("");
 
   const unnamed = t("employees.unnamed");
   const allLabel = t("entries.filter.employeeAll");
   const placeholderText =
     placeholder ?? t("combobox.employee.placeholder");
 
-  const committedLabel = useMemo(() => {
-    if (allowAll && value === "all") return allLabel;
-    if (!value) return "";
-    return employeeLabel(
-      employees.find((e) => e.id === value),
-      unnamed,
-    );
-  }, [allowAll, allLabel, employees, unnamed, value]);
+  const committedLabel =
+    allowAll && value === "all" ? allLabel : selectedLabel;
+
+  const isBrowsingCommitted =
+    Boolean(committedLabel) &&
+    query.trim().toLowerCase() === committedLabel.trim().toLowerCase();
+
+  const desiredSearchQ = !open
+    ? ""
+    : isBrowsingCommitted
+      ? ""
+      : query.trim();
+
+  // Debounce all searches including the initial open browse (AC-2 / AC-8).
+  useEffect(() => {
+    if (!open) {
+      setDebouncedQ(null);
+      return;
+    }
+    setDebouncedQ(null);
+    const handle = window.setTimeout(() => {
+      setDebouncedQ(desiredSearchQ);
+    }, DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [desiredSearchQ, open]);
+
+  // Resolve selected employee label via selectionCache and/or getEmployee.
+  useEffect(() => {
+    let cancelled = false;
+    async function resolveSelected() {
+      if (allowAll && value === "all") {
+        setSelectedLabel(allLabel);
+        setSelectionCache(null);
+        onSelectedEmployeeChange?.(null);
+        return;
+      }
+      if (!value) {
+        setSelectedLabel("");
+        setSelectionCache(null);
+        onSelectedEmployeeChange?.(null);
+        return;
+      }
+      if (selectionCache?.id === value) {
+        const label = employeeLabel(selectionCache, unnamed);
+        setSelectedLabel(label);
+        onSelectedEmployeeChange?.(selectionCache);
+        return;
+      }
+      try {
+        const emp = await api.getEmployee(value);
+        if (cancelled) return;
+        setSelectionCache(emp);
+        setSelectedLabel(employeeLabel(emp, unnamed));
+        onSelectedEmployeeChange?.(emp);
+      } catch {
+        if (cancelled) return;
+        setSelectedLabel(unnamed);
+        onSelectedEmployeeChange?.(null);
+      }
+    }
+    void resolveSelected();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowAll, allLabel, unnamed, value]);
+
+  const fetchEmployees = useCallback(
+    async (q: string, pageToLoad: number, append: boolean) => {
+      const seq = ++fetchSeq.current;
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+      try {
+        const res = await api.listEmployees({
+          page: pageToLoad,
+          limit: PAGE_LIMIT,
+          q: q || undefined,
+        });
+        if (seq !== fetchSeq.current) return;
+        setBrowseTotal(res.total);
+        setPage(pageToLoad);
+        setHasMore(pageToLoad * PAGE_LIMIT < res.total);
+        setOptions((prev) => (append ? [...prev, ...res.items] : res.items));
+      } catch {
+        if (seq !== fetchSeq.current) return;
+        if (!append) {
+          setOptions([]);
+          setHasMore(false);
+          setBrowseTotal(0);
+        }
+      } finally {
+        if (seq === fetchSeq.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [],
+  );
+
+  // Fetch page 1 only after debounce has settled.
+  useEffect(() => {
+    if (!open || debouncedQ === null) return;
+    void fetchEmployees(debouncedQ, 1, false);
+  }, [debouncedQ, fetchEmployees, open]);
 
   // Keep input display in sync with committed value when closed.
   useEffect(() => {
     if (!open) {
       setQuery(committedLabel);
+      setOptions([]);
+      setPage(1);
+      setHasMore(false);
+      setLoading(false);
     }
   }, [committedLabel, open]);
 
-  const filterQuery = open ? query.trim().toLowerCase() : "";
-  const browsingCommitted =
-    Boolean(committedLabel) &&
-    filterQuery === committedLabel.trim().toLowerCase();
-
-  const showAllOption =
-    allowAll &&
-    (!filterQuery ||
-      browsingCommitted ||
-      allLabel.toLowerCase().includes(filterQuery));
-
-  const filteredEmployees = useMemo(() => {
-    if (!filterQuery || browsingCommitted) return employees;
-    return employees.filter((emp) =>
-      employeeLabel(emp, unnamed).toLowerCase().includes(filterQuery),
-    );
-  }, [browsingCommitted, employees, filterQuery, unnamed]);
-
-  const options = useMemo(() => {
+  const listRows = useMemo(() => {
     const rows: Array<{ id: string; label: string }> = [];
+    const filterQuery = query.trim().toLowerCase();
+    const showAllOption =
+      allowAll &&
+      (!filterQuery ||
+        isBrowsingCommitted ||
+        allLabel.toLowerCase().includes(filterQuery));
+
     if (showAllOption) {
       rows.push({ id: "all", label: allLabel });
     }
-    for (const emp of filteredEmployees) {
+
+    // Pin selected employee when absent from current search page (AC-4).
+    if (
+      value &&
+      value !== "all" &&
+      selectionCache &&
+      selectionCache.id === value &&
+      !options.some((e) => e.id === value)
+    ) {
+      rows.push({
+        id: selectionCache.id,
+        label: employeeLabel(selectionCache, unnamed),
+      });
+    }
+
+    for (const emp of options) {
       rows.push({ id: emp.id, label: employeeLabel(emp, unnamed) });
     }
     return rows;
-  }, [allLabel, filteredEmployees, showAllOption, unnamed]);
+  }, [
+    allLabel,
+    allowAll,
+    isBrowsingCommitted,
+    options,
+    query,
+    selectionCache,
+    unnamed,
+    value,
+  ]);
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [filterQuery, open]);
+  }, [debouncedQ, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,28 +250,52 @@ export function EmployeeCombobox({
     return () => document.removeEventListener("mousedown", onDocPointerDown);
   }, [committedLabel, open]);
 
-  function labelForId(id: string): string {
-    if (id === "all") return allLabel;
-    if (!id) return "";
-    return employeeLabel(
-      employees.find((e) => e.id === id),
-      unnamed,
-    );
-  }
-
   function commit(next: string) {
+    if (next === "all") {
+      setSelectionCache(null);
+      onSelectedEmployeeChange?.(null);
+      onValueChange("all");
+      setOpen(false);
+      setQuery(allLabel);
+      return;
+    }
+    if (!next) {
+      setSelectionCache(null);
+      onSelectedEmployeeChange?.(null);
+      onValueChange("");
+      setOpen(false);
+      setQuery("");
+      return;
+    }
+    const fromOptions = options.find((e) => e.id === next);
+    const emp =
+      fromOptions ??
+      (selectionCache?.id === next ? selectionCache : undefined);
+    if (emp) {
+      setSelectionCache(emp);
+      setSelectedLabel(employeeLabel(emp, unnamed));
+      onSelectedEmployeeChange?.(emp);
+    }
     onValueChange(next);
     setOpen(false);
-    setQuery(labelForId(next));
+    setQuery(emp ? employeeLabel(emp, unnamed) : "");
   }
 
   function clearSelection() {
-    if (allowAll) {
-      commit("all");
-    } else {
-      onValueChange("");
-      setQuery("");
-      setOpen(false);
+    if (allowAll) commit("all");
+    else commit("");
+  }
+
+  function loadMore() {
+    if (!hasMore || loading || loadingMore || debouncedQ === null) return;
+    void fetchEmployees(debouncedQ, page + 1, true);
+  }
+
+  function onListScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+      loadMore();
     }
   }
 
@@ -158,7 +311,9 @@ export function EmployeeCombobox({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
-      setActiveIndex((i) => Math.min(i + 1, Math.max(options.length - 1, 0)));
+      setActiveIndex((i) =>
+        Math.min(i + 1, Math.max(listRows.length - 1, 0)),
+      );
       return;
     }
     if (event.key === "ArrowUp") {
@@ -167,22 +322,31 @@ export function EmployeeCombobox({
       setActiveIndex((i) => Math.max(i - 1, 0));
       return;
     }
-    if (event.key === "Enter" && open && options[activeIndex]) {
+    if (event.key === "Enter" && open && listRows[activeIndex]) {
       event.preventDefault();
-      commit(options[activeIndex].id);
+      commit(listRows[activeIndex].id);
     }
   }
 
-  const showClear =
-    allowAll ? value !== "all" && value !== "" : Boolean(value);
-
-  const emptyMessage = isLoading
-    ? t("combobox.employee.loading")
-    : employees.length === 0
-      ? t("combobox.employee.empty")
-      : t("combobox.employee.noResults");
-
+  const showClear = allowAll
+    ? value !== "all" && value !== ""
+    : Boolean(value);
   const showClosedLabel = !open && Boolean(committedLabel);
+  const searchActive = open && !isBrowsingCommitted && query.trim().length > 0;
+
+  // Loading while debounce pending or in-flight first page (AC-8).
+  const showLoading =
+    open &&
+    options.length === 0 &&
+    (debouncedQ === null || loading);
+  const showBrowseEmpty =
+    open &&
+    !showLoading &&
+    !searchActive &&
+    options.length === 0 &&
+    browseTotal === 0;
+  const showNoResults =
+    open && !showLoading && searchActive && options.length === 0;
 
   return (
     <div
@@ -210,7 +374,7 @@ export function EmployeeCombobox({
           aria-controls={listId}
           aria-autocomplete="list"
           data-testid={inputTestId ?? `${testIdPrefix}-input`}
-          disabled={disabled || isLoading}
+          disabled={disabled}
           placeholder={showClosedLabel ? undefined : placeholderText}
           value={query}
           className={cn(
@@ -243,38 +407,68 @@ export function EmployeeCombobox({
       </div>
       {open ? (
         <div
+          ref={listRef}
           id={listId}
           data-testid={listTestId ?? `${testIdPrefix}-list`}
           role="listbox"
           className="absolute z-[200] mt-1 max-h-60 w-full overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+          onScroll={onListScroll}
         >
-          {options.length === 0 ? (
-            <div className="px-2 py-1.5 text-sm text-muted-foreground">
-              {emptyMessage}
+          {showLoading ? (
+            <div
+              data-testid={`${testIdPrefix}-loading`}
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              {t("combobox.employee.loading")}
             </div>
-          ) : (
-            options.map((opt, index) => (
-              <div
-                key={opt.id}
-                role="option"
-                aria-selected={value === opt.id}
-                data-highlighted={index === activeIndex ? "" : undefined}
-                className={cn(
-                  "cursor-default rounded-md px-2 py-1.5 text-sm outline-none",
-                  index === activeIndex && "bg-accent text-accent-foreground",
-                  value === opt.id && "font-medium",
-                )}
-                onMouseEnter={() => setActiveIndex(index)}
-                onMouseDown={(e) => {
-                  // Prevent input blur before click commits.
-                  e.preventDefault();
-                }}
-                onClick={() => commit(opt.id)}
-              >
-                {opt.label}
-              </div>
-            ))
-          )}
+          ) : null}
+          {showBrowseEmpty ? (
+            <div
+              data-testid={`${testIdPrefix}-empty`}
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              {t("combobox.employee.empty")}
+            </div>
+          ) : null}
+          {showNoResults ? (
+            <div
+              data-testid={`${testIdPrefix}-no-results`}
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              {t("combobox.employee.noResults")}
+            </div>
+          ) : null}
+          {!showLoading && !showBrowseEmpty
+            ? listRows.map((opt, index) => (
+                <div
+                  key={`${opt.id}-${index}`}
+                  role="option"
+                  aria-selected={value === opt.id}
+                  data-highlighted={index === activeIndex ? "" : undefined}
+                  className={cn(
+                    "cursor-default rounded-md px-2 py-1.5 text-sm outline-none",
+                    index === activeIndex &&
+                      "bg-accent text-accent-foreground",
+                    value === opt.id && "font-medium",
+                  )}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                  }}
+                  onClick={() => commit(opt.id)}
+                >
+                  {opt.label}
+                </div>
+              ))
+            : null}
+          {loadingMore ? (
+            <div
+              data-testid={`${testIdPrefix}-loading`}
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              {t("combobox.employee.loading")}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

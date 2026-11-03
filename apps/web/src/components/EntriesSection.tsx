@@ -30,7 +30,6 @@ import {
 } from "@/lib/format";
 import { colorForKey } from "@/lib/colors";
 import { useI18n } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 
 type ViewMode = "list" | "calendar";
 type CalendarMode = "week" | "day";
@@ -184,11 +183,7 @@ export function EntriesSection() {
       ? formatWeekPeriodLabel(weekStart, intlLocale)
       : formatDayPeriodLabel(anchorDate, intlLocale);
 
-  const employeesQuery = useQuery({
-    queryKey: queryKeys.employeesAll,
-    queryFn: api.listAllEmployees,
-  });
-  const employees = employeesQuery.data ?? [];
+  const [filterEmployeeName, setFilterEmployeeName] = useState("");
 
   const listQuery = useQuery({
     queryKey: queryKeys.timeEntries({
@@ -234,10 +229,6 @@ export function EntriesSection() {
   const listTotal = listQuery.data?.total ?? 0;
   const calEntries = calQuery.data ?? [];
   const listEmpty = view === "list" && !listQuery.isLoading && listTotal === 0;
-  const calEmpty =
-    view === "calendar" && !calQuery.isLoading && calEntries.length === 0;
-
-
 
   async function invalidateEntries() {
     await Promise.all([
@@ -367,18 +358,35 @@ export function EntriesSection() {
     setAnchorDate(new Date());
   }
 
-  function openCreate(prefill?: { start: Date; stop: Date }) {
+  function openCreate(prefill?: {
+    start: Date;
+    stop: Date;
+    employeeId?: string;
+  }) {
     const now = new Date();
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const start = prefill?.start ?? hourAgo;
     const stop = prefill?.stop ?? now;
-    // Keep employee empty so required validation stays meaningful (AC-5).
-    setCreateEmployeeId("");
+    setCreateEmployeeId(prefill?.employeeId ?? "");
     setCreateDescription("");
     setCreateStart(toDatetimeLocalValue(start.toISOString()));
     setCreateStop(toDatetimeLocalValue(stop.toISOString()));
     setCreateError(null);
     setCreateOpen(true);
+  }
+
+  function openWeekCellCreate(employeeId: string, day: Date) {
+    const start = new Date(
+      day.getFullYear(),
+      day.getMonth(),
+      day.getDate(),
+      9,
+      0,
+      0,
+      0,
+    );
+    const stop = new Date(start.getTime() + 60 * 60 * 1000);
+    openCreate({ start, stop, employeeId });
   }
 
   function onCreateSubmit(e: React.FormEvent) {
@@ -477,7 +485,7 @@ export function EntriesSection() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [employees],
+    [],
   );
 
   function blockStyle(
@@ -519,6 +527,47 @@ export function EntriesSection() {
       opacity: 0.92,
     };
   }
+
+  const weekResourceRows = useMemo(() => {
+    if (calMode !== "week") return [] as Array<{ id: string; name: string }>;
+    if (applied.employeeId !== "all") {
+      const id = applied.employeeId;
+      const fromEntry = calEntries.find((e) => e.employeeId === id);
+      const name =
+        fromEntry?.employeeName?.trim() ||
+        filterEmployeeName.trim() ||
+        t("employees.unnamed");
+      return [{ id, name }];
+    }
+    const map = new Map<string, string>();
+    for (const entry of calEntries) {
+      if (!map.has(entry.employeeId)) {
+        map.set(
+          entry.employeeId,
+          entry.employeeName?.trim() || t("employees.unnamed"),
+        );
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, intlLocale));
+  }, [
+    applied.employeeId,
+    calEntries,
+    calMode,
+    filterEmployeeName,
+    intlLocale,
+    t,
+  ]);
+
+  const weekShowEmpty =
+    calMode === "week" &&
+    !calQuery.isLoading &&
+    calEntries.length === 0 &&
+    applied.employeeId === "all";
+
+  const dayShowEmpty =
+    calMode === "day" && !calQuery.isLoading && calEntries.length === 0;
 
   return (
     <section
@@ -661,11 +710,12 @@ export function EntriesSection() {
             inputTestId="entries-filter-employee-input"
             listTestId="entries-filter-employee-list"
             clearTestId="entries-filter-employee-clear"
-            employees={employees}
             value={filterEmployeeId}
             onValueChange={(v) => setFilterEmployeeId(v || "all")}
+            onSelectedEmployeeChange={(emp) =>
+              setFilterEmployeeName(emp?.name?.trim() || "")
+            }
             allowAll
-            isLoading={employeesQuery.isLoading}
           />
         </div>
         {view === "list" ? (
@@ -764,10 +814,7 @@ export function EntriesSection() {
                       className="border-b last:border-0"
                     >
                       <td className="px-3 py-2">
-                        {entry.employeeName ??
-                          employees.find((e) => e.id === entry.employeeId)
-                            ?.name ??
-                          t("employees.unnamed")}
+                        {entry.employeeName?.trim() || t("employees.unnamed")}
                       </td>
                       <td className="px-3 py-2">{entry.description}</td>
                       <td
@@ -814,7 +861,7 @@ export function EntriesSection() {
           data-testid="entries-calendar"
           className="flex w-full min-w-0 flex-col gap-2 overflow-x-auto"
         >
-          {calEmpty ? (
+          {weekShowEmpty || dayShowEmpty ? (
             <p
               data-testid="entries-empty"
               className="rounded-lg border border-dashed px-4 py-6 text-center text-muted-foreground"
@@ -822,122 +869,221 @@ export function EntriesSection() {
               {t("entries.calendar.empty")}
             </p>
           ) : null}
-          <p className="text-xs text-muted-foreground">
-            {t("entries.dragCreate.hint")}
-          </p>
-          <div
-            className={cn(
-              "grid min-w-0 gap-0 border-t",
-              calMode === "week"
-                ? "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]"
-                : "grid-cols-[3.5rem_minmax(0,1fr)]",
-            )}
-          >
-            <div className="border-b border-r" />
-            {visibleDays.map((day) => (
-              <div
-                key={toIsoDate(day)}
-                className="border-b border-r px-1 py-2 text-center text-xs font-medium"
-              >
-                <div>
-                  {day.toLocaleDateString(intlLocale, { weekday: "short" })}
-                </div>
-                <div className="text-muted-foreground">{day.getDate()}</div>
-              </div>
-            ))}
+          {calMode === "day" ? (
+            <p className="text-xs text-muted-foreground">
+              {t("entries.dragCreate.hint")}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {t("entries.weekCreate.hint")}
+            </p>
+          )}
 
+          {calMode === "week" && !weekShowEmpty ? (
             <div
-              data-testid="entries-hour-axis"
-              className="hour-axis relative border-r"
-              style={{ height: GRID_HEIGHT }}
+              data-testid="entries-week-resource"
+              className="grid min-w-[48rem] grid-cols-[10rem_repeat(7,minmax(0,1fr))] border-t"
             >
-              {HOURS.map((hour) => (
+              <div className="border-b border-r bg-muted/30 px-2 py-2 text-xs font-medium text-muted-foreground">
+                {t("report.columns.employee")}
+              </div>
+              {weekDays.map((day) => (
                 <div
-                  key={hour}
-                  data-hour={hour}
-                  className="absolute right-1 -translate-y-1/2 text-[10px] text-muted-foreground"
-                  style={{ top: (hour - DAY_START_HOUR) * HOUR_HEIGHT }}
+                  key={toIsoDate(day)}
+                  data-day={toIsoDate(day)}
+                  data-testid={`entries-day-${toIsoDate(day)}`}
+                  className="border-b border-r px-1 py-2 text-center text-xs font-medium"
                 >
-                  {`${String(hour).padStart(2, "0")}:00`}
+                  <div>
+                    {day.toLocaleDateString(intlLocale, { weekday: "short" })}
+                  </div>
+                  <div className="text-muted-foreground">{day.getDate()}</div>
                 </div>
               ))}
-            </div>
 
-            {visibleDays.map((day) => {
-              const dayKey = toIsoDate(day);
-              const dayEntries = calEntries.filter(
-                (e) => localIsoDateFromTimestamp(e.start) === dayKey,
-              );
-              const overlap = computeOverlapLayout(dayEntries);
-              return (
-                <div
-                  key={dayKey}
-                  data-day={dayKey}
-                  data-testid={`entries-day-${dayKey}`}
-                  className="relative touch-none border-r border-b select-none"
-                  style={{ height: GRID_HEIGHT }}
-                  onPointerDown={(e) => onGridPointerDown(day, e)}
-                  onPointerMove={onGridPointerMove}
-                  onPointerUp={onGridPointerUp}
-                >
-                  {HOURS.map((hour) => (
-                    <div
-                      key={hour}
-                      className="pointer-events-none absolute inset-x-0 border-t border-border/60"
-                      style={{
-                        top: (hour - DAY_START_HOUR) * HOUR_HEIGHT,
-                        height: HOUR_HEIGHT,
-                      }}
-                    />
-                  ))}
-                  {dragOverlay?.dayKey === dayKey ? (
-                    <div
-                      data-testid="entries-drag-select"
-                      className="pointer-events-none absolute inset-x-1 rounded bg-primary/20"
-                      style={{
-                        top: dragOverlay.top,
-                        height: dragOverlay.height,
-                      }}
-                    />
-                  ) : null}
-                  {dayEntries.map((entry) => {
-                    const name =
-                      entry.employeeName ??
-                      employees.find((e) => e.id === entry.employeeId)?.name ??
-                      t("employees.unnamed");
-                    const dur =
-                      entry.stop == null
-                        ? t("entries.running")
-                        : formatDuration(entry.durationSeconds ?? 0, locale);
-                    const layout = overlap.get(entry.id);
+              {weekResourceRows.map((row) => (
+                <div key={row.id} className="contents">
+                  <div
+                    data-testid={`entries-employee-row-${row.id}`}
+                    className="flex items-center border-b border-r px-2 py-2 text-sm font-medium"
+                    title={row.name}
+                  >
+                    <span className="truncate">{row.name}</span>
+                  </div>
+                  {weekDays.map((day) => {
+                    const dayKey = toIsoDate(day);
+                    const cellEntries = calEntries.filter(
+                      (e) =>
+                        e.employeeId === row.id &&
+                        localIsoDateFromTimestamp(e.start) === dayKey,
+                    );
                     return (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        data-entry-block
-                        data-employee-id={entry.employeeId}
-                        data-testid={`entries-calendar-block-${entry.id}`}
-                        title={`${name} · ${entry.description} · ${dur}`}
-                        className="absolute z-10 overflow-hidden rounded border px-1 py-0.5 text-left text-[10px] leading-tight shadow-sm hover:brightness-95"
-                        style={blockStyle(entry, day, layout)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEdit(entry);
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
+                      <div
+                        key={`${row.id}-${dayKey}`}
+                        data-testid={`entries-week-cell-${row.id}-${dayKey}`}
+                        data-employee-id={row.id}
+                        className="relative min-h-40 cursor-pointer border-b border-r p-1 hover:bg-muted/40"
+                        onClick={() => openWeekCellCreate(row.id, day)}
                       >
-                        <div className="truncate font-medium">{name}</div>
-                        <div className="truncate opacity-80">
-                          {entry.description}
+                        <div className="pointer-events-none absolute inset-0" aria-hidden />
+                        <div className="relative z-[1] flex flex-col gap-1">
+                          {cellEntries.map((entry) => {
+                            const dur =
+                              entry.stop == null
+                                ? t("entries.running")
+                                : formatDuration(
+                                    entry.durationSeconds ?? 0,
+                                    locale,
+                                  );
+                            const timeLabel = formatInterval(
+                              entry.start,
+                              entry.stop,
+                              locale,
+                            );
+                            const fill = colorForKey(entry.employeeId);
+                            return (
+                              <button
+                                key={entry.id}
+                                type="button"
+                                data-entry-block
+                                data-testid={`entries-calendar-block-${entry.id}`}
+                                title={`${entry.description} · ${timeLabel} · ${dur}`}
+                                className="pointer-events-auto w-full truncate rounded border px-1 py-0.5 text-left text-[10px] leading-tight shadow-sm hover:brightness-95"
+                                style={{
+                                  backgroundColor: fill,
+                                  borderColor: fill,
+                                  color: "var(--foreground)",
+                                  opacity: 0.92,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(entry);
+                                }}
+                              >
+                                <div className="truncate font-medium">
+                                  {entry.description}
+                                </div>
+                                <div className="truncate tabular-nums opacity-80">
+                                  {dur}
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div className="tabular-nums opacity-80">{dur}</div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : null}
+
+          {calMode === "day" ? (
+            <div className="grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] gap-0 border-t">
+              <div className="border-b border-r" />
+              {visibleDays.map((day) => (
+                <div
+                  key={toIsoDate(day)}
+                  className="border-b border-r px-1 py-2 text-center text-xs font-medium"
+                >
+                  <div>
+                    {day.toLocaleDateString(intlLocale, { weekday: "short" })}
+                  </div>
+                  <div className="text-muted-foreground">{day.getDate()}</div>
+                </div>
+              ))}
+
+              <div
+                data-testid="entries-hour-axis"
+                className="hour-axis relative border-r"
+                style={{ height: GRID_HEIGHT }}
+              >
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    data-hour={hour}
+                    className="absolute right-1 -translate-y-1/2 text-[10px] text-muted-foreground"
+                    style={{ top: (hour - DAY_START_HOUR) * HOUR_HEIGHT }}
+                  >
+                    {`${String(hour).padStart(2, "0")}:00`}
+                  </div>
+                ))}
+              </div>
+
+              {visibleDays.map((day) => {
+                const dayKey = toIsoDate(day);
+                const dayEntries = calEntries.filter(
+                  (e) => localIsoDateFromTimestamp(e.start) === dayKey,
+                );
+                const overlap = computeOverlapLayout(dayEntries);
+                return (
+                  <div
+                    key={dayKey}
+                    data-day={dayKey}
+                    data-testid={`entries-day-${dayKey}`}
+                    className="relative touch-none border-r border-b select-none"
+                    style={{ height: GRID_HEIGHT }}
+                    onPointerDown={(e) => onGridPointerDown(day, e)}
+                    onPointerMove={onGridPointerMove}
+                    onPointerUp={onGridPointerUp}
+                  >
+                    {HOURS.map((hour) => (
+                      <div
+                        key={hour}
+                        className="pointer-events-none absolute inset-x-0 border-t border-border/60"
+                        style={{
+                          top: (hour - DAY_START_HOUR) * HOUR_HEIGHT,
+                          height: HOUR_HEIGHT,
+                        }}
+                      />
+                    ))}
+                    {dragOverlay?.dayKey === dayKey ? (
+                      <div
+                        data-testid="entries-drag-select"
+                        className="pointer-events-none absolute inset-x-1 rounded bg-primary/20"
+                        style={{
+                          top: dragOverlay.top,
+                          height: dragOverlay.height,
+                        }}
+                      />
+                    ) : null}
+                    {dayEntries.map((entry) => {
+                      const name =
+                        entry.employeeName?.trim() || t("employees.unnamed");
+                      const dur =
+                        entry.stop == null
+                          ? t("entries.running")
+                          : formatDuration(entry.durationSeconds ?? 0, locale);
+                      const layout = overlap.get(entry.id);
+                      return (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          data-entry-block
+                          data-employee-id={entry.employeeId}
+                          data-testid={`entries-calendar-block-${entry.id}`}
+                          title={`${name} · ${entry.description} · ${dur}`}
+                          className="absolute z-10 overflow-hidden rounded border px-1 py-0.5 text-left text-[10px] leading-tight shadow-sm hover:brightness-95"
+                          style={blockStyle(entry, day, layout)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(entry);
+                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <div className="truncate font-medium">{name}</div>
+                          <div className="truncate opacity-80">
+                            {entry.description}
+                          </div>
+                          <div className="tabular-nums opacity-80">{dur}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -960,10 +1106,8 @@ export function EntriesSection() {
                   inputTestId="entries-create-employee-input"
                   listTestId="entries-create-employee-list"
                   clearTestId="entries-create-employee-clear"
-                  employees={employees}
                   value={createEmployeeId}
                   onValueChange={setCreateEmployeeId}
-                  isLoading={employeesQuery.isLoading}
                   placeholder={t("timer.employeePlaceholder")}
                 />
               </div>

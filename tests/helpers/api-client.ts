@@ -231,10 +231,13 @@ export function todayIsoDate(): string {
 export async function listEmployeesPage(params?: {
   page?: number;
   limit?: number;
+  /** Optional name contains filter (AC-1 employee-search-week-calendar). */
+  q?: string;
 }): Promise<{ status: number; body: Paginated<Employee> | Employee[] | unknown }> {
   const q = new URLSearchParams();
   if (params?.page != null) q.set("page", String(params.page));
   if (params?.limit != null) q.set("limit", String(params.limit));
+  if (params?.q != null) q.set("q", params.q);
   const suffix = q.toString() ? `?${q}` : "";
   const res = await apiRequest(`/employees${suffix}`);
   const body = await parseJson(res).catch(() => null);

@@ -21,7 +21,7 @@ export class EmployeesController {
 
   @Get()
   findAll(@Query() query: ListEmployeesQueryDto) {
-    return this.employeesService.findPage(query.page, query.limit);
+    return this.employeesService.findPage(query.page, query.limit, query.q);
   }
 
   @Get(':id/stats')

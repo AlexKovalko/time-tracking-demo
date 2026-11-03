@@ -17,7 +17,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
+    this.registerUnicodeLower();
     this.migrate();
+  }
+
+  /** SQLite COLLATE NOCASE / lower() are ASCII-only; JS handles Cyrillic. */
+  private registerUnicodeLower(): void {
+    this.db.function('unicode_lower', { deterministic: true }, (value: unknown) =>
+      String(value ?? '').toLocaleLowerCase('en-US'),
+    );
   }
 
   onModuleDestroy(): void {

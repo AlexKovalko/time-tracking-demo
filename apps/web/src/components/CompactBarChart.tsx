@@ -1,7 +1,14 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { chartLabel, chartValue, type ChartBucket } from "@/lib/api";
 import { chartColorAt } from "@/lib/colors";
-import { formatDuration, formatWeekBucketLabel } from "@/lib/format";
+import {
+  durationAxisTicks,
+  formatDayAxisTick,
+  formatDuration,
+  formatDurationAxisTick,
+  formatWeekAxisTick,
+  formatWeekBucketLabel,
+} from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import {
   ChartTooltip,
@@ -21,11 +28,24 @@ type Props = {
   formatLabel?: (raw: string) => string;
 };
 
-const CHART_H = 220;
-const PAD_L = 8;
-const PAD_R = 8;
+const CHART_H = 236;
+const PAD_L = 40;
+const PAD_R = 12;
 const PAD_T = 12;
-const PAD_B = 16;
+const PAD_B = 28;
+
+function axisTickForBucket(
+  base: string,
+  bucket: "day" | "week",
+): string {
+  if (bucket === "week") {
+    return formatWeekAxisTick(base);
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(base) || /^\d{4}-W\d{1,2}$/i.test(base)) {
+    return formatDayAxisTick(base);
+  }
+  return base;
+}
 
 export function CompactBarChart({
   data,
@@ -58,8 +78,15 @@ export function CompactBarChart({
     } else {
       label = base;
     }
+    // Axis ticks stay short (DD.MM / week number) even when formatLabel
+    // enriches the tooltip / a11y label (e.g. EmployeeProfile week override).
+    const axisTick =
+      Boolean(raw) && raw !== "unassigned" && raw !== "null"
+        ? axisTickForBucket(raw, bucket)
+        : label;
     return {
       label,
+      axisTick,
       value: chartValue(row),
       color: chartColorAt(index),
       key: raw || String(index),
@@ -67,6 +94,7 @@ export function CompactBarChart({
   });
   const max = Math.max(0, ...rows.map((r) => r.value));
   const hasData = rows.some((r) => r.value > 0);
+  const yTicks = durationAxisTicks(max);
 
   if (!hasData) {
     return (
@@ -150,6 +178,34 @@ export function CompactBarChart({
         viewBox={`0 0 ${width} ${CHART_H}`}
         className="mx-auto block max-h-[280px]"
       >
+        {yTicks.map((sec) => {
+          const y =
+            max > 0 ? PAD_T + plotH - (sec / max) * plotH : PAD_T + plotH;
+          return (
+            <g key={`y-tick-${sec}`} data-axis="y" data-chart-axis="y">
+              <line
+                x1={PAD_L}
+                y1={y}
+                x2={PAD_L + plotW}
+                y2={y}
+                stroke="currentColor"
+                strokeOpacity={0.08}
+              />
+              <text
+                data-axis-tick="y"
+                x={PAD_L - 6}
+                y={y}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fill="currentColor"
+                fillOpacity={0.55}
+                fontSize={10}
+              >
+                {formatDurationAxisTick(sec, locale)}
+              </text>
+            </g>
+          );
+        })}
         <line
           data-axis="x"
           data-chart-axis="x"
@@ -205,6 +261,24 @@ export function CompactBarChart({
                 onKeyDown={(e) => onSegmentKeyDown(e, row)}
               />
             </g>
+          );
+        })}
+        {rows.map((row, i) => {
+          const x = PAD_L + i * (barW + gap) + gap / 2 + barW / 2;
+          return (
+            <text
+              key={`x-tick-${row.key}-${i}`}
+              data-axis-tick="x"
+              x={x}
+              y={PAD_T + plotH + 14}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              fill="currentColor"
+              fillOpacity={0.55}
+              fontSize={9}
+            >
+              {row.axisTick}
+            </text>
           );
         })}
       </svg>

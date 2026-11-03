@@ -149,6 +149,14 @@ export const tid = {
   // Delete entry confirm (AC-42)
   entriesDeleteConfirm: "entries-delete-confirm",
   entriesDeleteDialog: "entries-delete-dialog",
+
+  // employee-search-week-calendar (#93) — week resource + combobox async states
+  entriesWeekResource: "entries-week-resource",
+  entriesEmployeeRow: "entries-employee-row",
+  entriesWeekCell: "entries-week-cell",
+  entriesFilterEmployeeLoading: "entries-filter-employee-loading",
+  entriesFilterEmployeeEmpty: "entries-filter-employee-empty",
+  entriesFilterEmployeeNoResults: "entries-filter-employee-no-results",
 } as const;
 
 export const UUID_LABEL_RE =

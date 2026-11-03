@@ -164,12 +164,14 @@ export const api = {
   listEmployees: async (params?: {
     page?: number;
     limit?: number;
+    q?: string;
   }): Promise<Paginated<Employee>> => {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 50;
     const q = new URLSearchParams();
     q.set("page", String(page));
     q.set("limit", String(limit));
+    if (params?.q) q.set("q", params.q);
     const { data } = await request<Employee[] | Paginated<Employee>>(
       `/api/employees?${q}`,
     );

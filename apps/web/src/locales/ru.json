@@ -187,5 +187,6 @@
   "combobox.employee.empty": "Нет сотрудников",
   "combobox.employee.noResults": "Сотрудники не найдены",
   "combobox.employee.clear": "Очистить выбор",
-  "charts.tooltip.a11y": "{{label}}: {{value}}"
+  "charts.tooltip.a11y": "{{label}}: {{value}}",
+  "entries.weekCreate.hint": "Нажмите на пустую ячейку, чтобы создать запись"
 }

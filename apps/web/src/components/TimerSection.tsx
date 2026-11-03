@@ -2,16 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClockIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { EmployeeCombobox } from "@/components/EmployeeCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -45,9 +39,9 @@ export function TimerSection() {
   const [hideConfirmOpen, setHideConfirmOpen] = useState(false);
   const [a11yMessage, setA11yMessage] = useState("");
 
-  const employeesQuery = useQuery({
-    queryKey: queryKeys.employeesAll,
-    queryFn: api.listAllEmployees,
+  const employeesPresenceQuery = useQuery({
+    queryKey: ["employees", "presence"],
+    queryFn: () => api.listEmployees({ page: 1, limit: 1 }),
   });
 
   const activeQuery = useQuery({
@@ -56,8 +50,9 @@ export function TimerSection() {
     refetchInterval: 5000,
   });
 
-  const employees = employeesQuery.data ?? [];
+  const hasEmployees = (employeesPresenceQuery.data?.total ?? 0) > 0;
   const activeTimers = activeQuery.data ?? [];
+  const [selectedEmployeeName, setSelectedEmployeeName] = useState("");
 
   const selectedRunning: ActiveTimer | undefined = useMemo(() => {
     if (!employeeId) return undefined;
@@ -69,9 +64,26 @@ export function TimerSection() {
 
   const elapsed = useElapsed(displayRunning?.start);
   const isRunning = !!displayRunning;
-  const selectedEmployeeName =
-    employees.find((e) => e.id === (displayRunning?.employeeId ?? employeeId))
-      ?.name ?? "";
+
+  useEffect(() => {
+    const id = displayRunning?.employeeId ?? employeeId;
+    if (!id) {
+      if (!employeeId) setSelectedEmployeeName("");
+      return;
+    }
+    let cancelled = false;
+    void api.getEmployee(id).then(
+      (emp) => {
+        if (!cancelled) setSelectedEmployeeName(emp.name?.trim() || "");
+      },
+      () => {
+        if (!cancelled) setSelectedEmployeeName("");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [displayRunning?.employeeId, employeeId]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -239,34 +251,27 @@ export function TimerSection() {
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="timer-employee-select">
+                <Label htmlFor="timer-employee-select-input">
                   {t("timer.employeeLabel")}
                 </Label>
-                <Select
-                  value={employeeId || undefined}
+                <EmployeeCombobox
+                  testIdPrefix="timer-employee-select"
+                  inputTestId="timer-employee-select-input"
+                  listTestId="timer-employee-select-list"
+                  clearTestId="timer-employee-select-clear"
+                  value={employeeId}
                   onValueChange={(value) => {
-                    setEmployeeId(value ?? "");
+                    setEmployeeId(value);
                     setAlreadyRunningError(false);
                     setFormError(null);
                   }}
-                  disabled={employees.length === 0}
-                >
-                  <SelectTrigger
-                    id="timer-employee-select"
-                    data-testid="timer-employee-select"
-                    className="w-full"
-                  >
-                    <SelectValue placeholder={t("timer.employeePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name || t("employees.unnamed")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {employees.length === 0 ? (
+                  onSelectedEmployeeChange={(emp) =>
+                    setSelectedEmployeeName(emp?.name?.trim() || "")
+                  }
+                  disabled={!hasEmployees && !employeesPresenceQuery.isLoading}
+                  placeholder={t("timer.employeePlaceholder")}
+                />
+                {!hasEmployees && !employeesPresenceQuery.isLoading ? (
                   <p className="text-sm text-muted-foreground">
                     <Link
                       to="/employees"
@@ -299,7 +304,7 @@ export function TimerSection() {
                   type="button"
                   data-testid="timer-start-button"
                   onClick={onStart}
-                  disabled={startMutation.isPending || employees.length === 0}
+                  disabled={startMutation.isPending || !hasEmployees}
                 >
                   {t("timer.start")}
                 </Button>

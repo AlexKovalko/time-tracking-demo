@@ -187,5 +187,6 @@
   "combobox.employee.empty": "No employees yet",
   "combobox.employee.noResults": "No employees found",
   "combobox.employee.clear": "Clear selection",
-  "charts.tooltip.a11y": "{{label}}: {{value}}"
+  "charts.tooltip.a11y": "{{label}}: {{value}}",
+  "entries.weekCreate.hint": "Click an empty cell to create an entry"
 }
