@@ -1,5 +1,5 @@
 ---
-description: Delegate Queply work to custom subagents with PM role cast, shared checkout, AC-N, handoff-meta, and agentmemory handoffs — only after explicit /dev-team
+description: Delegate work to custom subagents with PM role cast, shared checkout, AC-N, handoff-meta, and agentmemory handoffs — only after explicit /dev-team
 alwaysApply: true
 ---
 
@@ -7,12 +7,14 @@ alwaysApply: true
 
 ## Gate: explicit `/dev-team` only
 
-- **Start the multi-role team pipeline only when the user message contains the exact command `/dev-team`** (optionally with a task description after it).
+- **Start the multi-role team pipeline only when the *current* user message contains the exact command `/dev-team`** (optionally with a task description after it).
 - Do **not** assemble the cast, launch BA/PM/orchestrator pipeline, or spawn role subagents because of soft phrasing («собери команду», «команда», «feature team», «dev-team», «оркестрируй») without `/dev-team`.
-- Without `/dev-team`: work as a normal single agent (or honor a **single** explicit role slash like `/backend-dev` / `/qa` if the user typed that). Do not invent a full team.
-- Continuations of an **already started** `/dev-team` stage (user «ок», «делай», answers to grill) may resume that cast — do not start a **new** team from soft phrasing alone.
+- Without `/dev-team`: work as a **normal single agent** (implement / fix / explore yourself). You may honor a **single** explicit role slash like `/backend-dev` / `/qa` if the user typed that. Do **not** invent a full team, bug fast-path cast, or epic+AC pipeline.
+- **Hard ban — `Task(subagent_type: "orchestrator")`:** never call it unless the *current* user message contains `/dev-team`, or you are **resuming the same** `/dev-team` stage (user «ок» / «делай» / grill answers for that already-open cast). A prior turn that once used orchestrator does **not** authorize later unrelated asks.
+- When the gate is open and you spawn orchestrator, the Task prompt **must** include the exact line `dev_team_authorized: true` (and preferably quote the user `/dev-team` line). Without that marker, orchestrator must refuse.
+- Continuations resume **that** cast only — do **not** start a **new** team/slug from soft phrasing alone.
 
-Parent Agent is the **orchestrator** (see also `.cursor/agents/orchestrator.md`) **only inside an active `/dev-team` run**. Prefer custom subagents in `.cursor/agents/` for role-shaped work when the gate is open. Do not invent parallel process that skips `task-intake.mdc` / grill / specs / user «ок» before production code.
+Parent Agent acts as the **orchestrator** (see also `.cursor/agents/orchestrator.md`) **only inside an active `/dev-team` run**. Prefer custom subagents in `.cursor/agents/` for role-shaped work when the gate is open. Do not invent parallel process that skips `task-intake.mdc` / grill / specs / user «ок» before production code.
 
 ## Role cast (PM owns staffing)
 
@@ -62,7 +64,7 @@ Task prompts for QA **must** include `phase: write` or `phase: verify`.
 
 ### Bug fast-path
 
-Clear repro: PM/orchestrator may publish a **short cast** without BA/PM/ui-ux/marketer (typical: `qa write → owner eng → qa verify`; add security/tech-writer only if in cast). Lint/format/commit-only: no full team.
+Only inside an active `/dev-team` run (or as **single-agent** work with no team). Clear repro: PM/orchestrator may publish a **short cast** without BA/PM/ui-ux/marketer (typical: `qa write → owner eng → qa verify`; add security/tech-writer only if in cast). Lint/format/commit-only: no full team. Do **not** invent a fast-path cast via `Task(orchestrator)` when the user never typed `/dev-team`.
 
 ## Shared ownership
 
@@ -74,7 +76,7 @@ One working tree. Enforce ownership in prompts and `agent.md`:
 | `apps/dashboard` | `frontend-dev` only |
 | `packages/**` | **Not** parallel with FE/BE. Owner in `agent.md` (default `backend-dev`; `frontend-dev` only if PM explicitly said dashboard-facing) |
 | Cabinet i18n locale JSON | **`frontend-dev` only**. Marketer writes copy proposals in `docs/specs/<slug>/` (`copy.md` / `marketing.md`) |
-| Landing | Marketer; content in `queply_landing` only when that repo is in the workspace **and** Task explicitly allows |
+| Landing | Marketer; content in the landing repo only when that repo is in the workspace **and** Task explicitly allows |
 | Planning roles (BA/PM/architect/ui-ux/marketer/tech-writer) | **docs/** (+ agreed content) only — policy B |
 
 Marketer ↔ ui-ux: marketer proposes sellability layout tips in docs; ui-ux folds them into the UX contract. **ui-ux veto** only for a11y / design-system conflicts. Disputes on “how to sell” → user/PM.
@@ -230,6 +232,8 @@ See also `no-tech-debt.mdc`.
 ## Anti-patterns
 
 - Assembling the multi-role team without an explicit `/dev-team` in the user message (soft «собери команду» / «команда» does not count)
+- Calling `Task(subagent_type: "orchestrator")` on ordinary feature/bug asks («сделай X», «Enter confirms delete», UI polish) — **forbidden**; do the work as a single agent or wait for `/dev-team`
+- Treating «chat once ran orchestrator» as a standing license for every later request
 - Launching roles outside the PM role cast (or without updating cast after user override)
 - Starting FE/BE before user OK on a non-trivial feature
 - Starting FE/BE before **qa write** on a non-trivial behavior change (unless user explicitly skips)

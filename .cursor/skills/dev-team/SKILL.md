@@ -1,7 +1,7 @@
 ---
 name: dev-team
 description: >-
-  Runs the Queply multi-role subagent pipeline driven by the PM role cast
+  Runs the multi-role subagent pipeline driven by the PM role cast
   (BA, architect, PM, UI/UX, Marketer, backend-dev, frontend-dev, QA, security,
   DevOps, tech-writer, orchestrator). Use ONLY when the user explicitly types
   /dev-team (with optional task text). Do not trigger on soft phrases like
@@ -12,7 +12,17 @@ description: >-
 
 ## Gate (hard)
 
-Invoke this skill / assemble the team **only** on an explicit `/dev-team` in the user message. Soft synonyms without `/dev-team` must not start the pipeline.
+Invoke this skill / assemble the team **only** on an explicit `/dev-team` in the *current* user message. Soft synonyms without `/dev-team` must not start the pipeline.
+
+**Hard ban:** do **not** call `Task(subagent_type: "orchestrator")` for ordinary asks («сделай X», bug/UI polish) even if an earlier turn in the chat used the team. Without `/dev-team`, work as a single agent.
+
+When the gate is open and you spawn orchestrator, include in the Task prompt:
+
+```text
+dev_team_authorized: true
+```
+
+(and quote the user `/dev-team …` line). Orchestrator refuses without that marker.
 
 ## Quick start
 
@@ -36,7 +46,7 @@ Orchestrator (parent / `/orchestrator`): follow `.cursor/rules/dev-team-orchestr
 
 ### Bug fast-path
 
-Clear repro: short cast without BA/PM/ui-ux/marketer by default:
+**Still requires `/dev-team`** (or single-agent work outside the team). Clear repro after the gate is open: short cast without BA/PM/ui-ux/marketer by default:
 
 `qa write (regression) → owner eng → qa verify → close`
 
@@ -77,8 +87,14 @@ Every role issue comment ends with `### handoff-meta` (slug, issue, role, status
 WRONG: Start the team because the user said «собери команду» / «нужна команда» without `/dev-team`.  
 RIGHT: Wait for explicit `/dev-team`; otherwise work as a single agent.
 
+WRONG: Parent calls `Task(… orchestrator)` on «Подтверждение удаления по Enter» / UI polish / clear bugs.  
+RIGHT: No `/dev-team` → single-agent fix (or one explicit role slash). Team pipeline stays idle.
+
+WRONG: Spawn orchestrator without `dev_team_authorized: true` in the prompt.  
+RIGHT: Marker required; orchestrator refuses if missing.
+
 WRONG: Launch every roster role on a small bug.  
-RIGHT: Short cast; orchestrator executes only that cast.
+RIGHT: Short cast; orchestrator executes only that cast — and only after `/dev-team`.
 
 WRONG: Implement the whole feature in the parent chat while ignoring cast eng roles.  
 RIGHT: Parent plans and integrates; specialists own their trees.
@@ -91,7 +107,7 @@ RIGHT: Parent epic + AC child issues only; roles hand off via comments on the pa
 
 ## Checklist
 
-- [ ] User invoked explicit `/dev-team` (not soft phrasing alone)
+- [ ] User invoked explicit `/dev-team` (not soft phrasing alone); orchestrator Task has `dev_team_authorized: true`
 - [ ] Role cast published (ordered who in / who out); no launches outside cast
 - [ ] Specs path under `docs/specs/<slug>/` when non-trivial
 - [ ] Parent GitHub issue `#N` exists and is passed to every role

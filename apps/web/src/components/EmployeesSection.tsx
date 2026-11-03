@@ -1,6 +1,6 @@
 import { RowIconActions } from "@/components/RowIconActions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,8 @@ export function EmployeesSection() {
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const deleteTargetRef = useRef<Employee | null>(null);
+  deleteTargetRef.current = deleteTarget;
 
   const [deptCreateOpen, setDeptCreateOpen] = useState(false);
   const [deptName, setDeptName] = useState("");
@@ -160,6 +162,22 @@ export function EmployeesSection() {
       await invalidatePeople();
     },
   });
+
+  // Enter confirms delete while the alert is open (same product pattern as entries).
+  useEffect(() => {
+    if (!deleteTarget) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const id = deleteTargetRef.current?.id;
+      if (!id) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setDeleteTarget(null);
+      deleteMutation.mutate(id);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [deleteTarget]);
 
   const createDeptMutation = useMutation({
     mutationFn: (name: string) => api.createDepartment(name),
@@ -642,8 +660,12 @@ export function EmployeesSection() {
             <AlertDialogCancel>{t("employees.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              autoFocus
               onClick={() => {
-                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                const id = deleteTargetRef.current?.id ?? deleteTarget?.id;
+                if (!id) return;
+                setDeleteTarget(null);
+                deleteMutation.mutate(id);
               }}
             >
               {t("employees.delete")}
@@ -776,7 +798,10 @@ export function EmployeesSection() {
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                if (deleteDept) deleteDeptMutation.mutate(deleteDept.id);
+                const id = deleteDept?.id;
+                if (!id) return;
+                setDeleteDept(null);
+                deleteDeptMutation.mutate(id);
               }}
             >
               {t("departments.delete")}

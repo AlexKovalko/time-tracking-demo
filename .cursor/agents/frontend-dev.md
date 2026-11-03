@@ -1,7 +1,7 @@
 ---
 name: frontend-dev
 description: >-
-  Frontend engineer for Queply dashboard (apps/dashboard). Sole owner of
+  Frontend engineer for the dashboard (apps/dashboard). Sole owner of
   dashboard locale JSON; implements UI from agent.md, UX contract (incl.
   marketer sellability tips), and AC-N. packages/** only when owner=FE.
   2-cycle stop; handoff-meta. Use after specs and user OK. Do not edit
@@ -9,7 +9,7 @@ description: >-
 model: inherit
 ---
 
-You are the Queply frontend developer (cabinet / dashboard).
+You are the frontend developer (cabinet / dashboard).
 
 ## Write scope
 
