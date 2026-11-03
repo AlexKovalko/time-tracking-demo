@@ -177,5 +177,15 @@
   "profile.info.department": "Department",
   "profile.info.email": "Email",
   "profile.info.phone": "Phone",
-  "profile.info.empty": "—"
+  "profile.info.empty": "—",
+  "employees.department.unknown": "Unknown department",
+  "employees.department.placeholder": "Select department",
+  "pagination.pageSize": "Rows per page",
+  "pagination.pageSize.option": "{{n}}",
+  "combobox.employee.placeholder": "Search employee…",
+  "combobox.employee.loading": "Loading employees…",
+  "combobox.employee.empty": "No employees yet",
+  "combobox.employee.noResults": "No employees found",
+  "combobox.employee.clear": "Clear selection",
+  "charts.tooltip.a11y": "{{label}}: {{value}}"
 }

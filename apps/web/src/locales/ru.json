@@ -177,5 +177,15 @@
   "profile.info.department": "Подразделение",
   "profile.info.email": "Email",
   "profile.info.phone": "Телефон",
-  "profile.info.empty": "—"
+  "profile.info.empty": "—",
+  "employees.department.unknown": "Неизвестный отдел",
+  "employees.department.placeholder": "Выберите отдел",
+  "pagination.pageSize": "Строк на странице",
+  "pagination.pageSize.option": "{{n}}",
+  "combobox.employee.placeholder": "Найти сотрудника…",
+  "combobox.employee.loading": "Загрузка сотрудников…",
+  "combobox.employee.empty": "Нет сотрудников",
+  "combobox.employee.noResults": "Сотрудники не найдены",
+  "combobox.employee.clear": "Очистить выбор",
+  "charts.tooltip.a11y": "{{label}}: {{value}}"
 }

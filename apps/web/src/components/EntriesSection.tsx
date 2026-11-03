@@ -2,17 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2Icon } from "lucide-react";
 import { RowIconActions } from "@/components/RowIconActions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EmployeeCombobox } from "@/components/EmployeeCombobox";
 import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -128,7 +122,7 @@ export function EntriesSection() {
   const [calMode, setCalMode] = useState<CalendarMode>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   const [filterEmployeeId, setFilterEmployeeId] = useState("all");
   const [filterFrom, setFilterFrom] = useState(() =>
@@ -378,7 +372,8 @@ export function EntriesSection() {
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const start = prefill?.start ?? hourAgo;
     const stop = prefill?.stop ?? now;
-    setCreateEmployeeId(employees[0]?.id ?? "");
+    // Keep employee empty so required validation stays meaningful (AC-5).
+    setCreateEmployeeId("");
     setCreateDescription("");
     setCreateStart(toDatetimeLocalValue(start.toISOString()));
     setCreateStop(toDatetimeLocalValue(stop.toISOString()));
@@ -661,27 +656,17 @@ export function EntriesSection() {
       <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
         <div className="flex min-w-[10rem] flex-col gap-1.5">
           <Label>{t("entries.filter.employee")}</Label>
-          <Select
+          <EmployeeCombobox
+            testIdPrefix="entries-filter-employee"
+            inputTestId="entries-filter-employee-input"
+            listTestId="entries-filter-employee-list"
+            clearTestId="entries-filter-employee-clear"
+            employees={employees}
             value={filterEmployeeId}
-            onValueChange={(v) => setFilterEmployeeId(v ?? "all")}
-          >
-            <SelectTrigger
-              data-testid="entries-filter-employee"
-              className="w-full"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {t("entries.filter.employeeAll")}
-              </SelectItem>
-              {employees.map((emp) => (
-                <SelectItem key={emp.id} value={emp.id}>
-                  {emp.name || t("employees.unnamed")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onValueChange={(v) => setFilterEmployeeId(v || "all")}
+            allowAll
+            isLoading={employeesQuery.isLoading}
+          />
         </div>
         {view === "list" ? (
           <>
@@ -816,6 +801,10 @@ export function EntriesSection() {
             limit={pageSize}
             total={listTotal}
             onPageChange={setPage}
+            onLimitChange={(limit) => {
+              setPageSize(limit);
+              setPage(1);
+            }}
           />
         </>
       ) : null}
@@ -966,21 +955,17 @@ export function EntriesSection() {
             <form onSubmit={onCreateSubmit} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label>{t("entries.employeeLabel")}</Label>
-                <Select
-                  value={createEmployeeId || undefined}
-                  onValueChange={(value) => setCreateEmployeeId(value ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("timer.employeePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name || t("employees.unnamed")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <EmployeeCombobox
+                  testIdPrefix="entries-create-employee"
+                  inputTestId="entries-create-employee-input"
+                  listTestId="entries-create-employee-list"
+                  clearTestId="entries-create-employee-clear"
+                  employees={employees}
+                  value={createEmployeeId}
+                  onValueChange={setCreateEmployeeId}
+                  isLoading={employeesQuery.isLoading}
+                  placeholder={t("timer.employeePlaceholder")}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="entry-create-description">

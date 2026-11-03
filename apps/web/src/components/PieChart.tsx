@@ -1,7 +1,12 @@
+import { useRef, useState, type KeyboardEvent } from "react";
 import { chartLabel, chartValue, type ChartBucket } from "@/lib/api";
 import { chartColorAt, colorForKey } from "@/lib/colors";
 import { formatDuration } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import {
+  ChartTooltip,
+  type ChartTooltipState,
+} from "@/components/ChartTooltip";
 
 type Props = {
   data: ChartBucket[];
@@ -30,9 +35,11 @@ function donutSlice(
   if (sweep >= 359.9) {
     // Full ring via two halves
     const mid = startAngle + 180;
-    return donutSlice(cx, cy, outer, inner, startAngle, mid) +
+    return (
+      donutSlice(cx, cy, outer, inner, startAngle, mid) +
       " " +
-      donutSlice(cx, cy, outer, inner, mid, endAngle);
+      donutSlice(cx, cy, outer, inner, mid, endAngle)
+    );
   }
   const o0 = polar(cx, cy, outer, endAngle);
   const o1 = polar(cx, cy, outer, startAngle);
@@ -57,7 +64,10 @@ export function PieChart({
   unassignedLabel,
   variant = "donut",
 }: Props) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<ChartTooltipState>(null);
+
   const rows = data
     .map((row, index) => {
       const raw = chartLabel(row, "");
@@ -111,13 +121,59 @@ export function PieChart({
     return acc;
   }, []);
 
+  function showTipFor(
+    slice: (typeof slices)[number],
+    clientX: number,
+    clientY: number,
+  ) {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTip({
+      label: slice.label,
+      value: formatDuration(slice.value, locale),
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
+  }
+
+  function hideTip() {
+    setTip(null);
+  }
+
+  function onSliceKeyDown(
+    event: KeyboardEvent<SVGPathElement>,
+    slice: (typeof slices)[number],
+  ) {
+    if (event.key === "Escape") {
+      hideTip();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const el = event.currentTarget;
+      const box = el.getBoundingClientRect();
+      const wrap = wrapRef.current?.getBoundingClientRect();
+      if (!wrap) return;
+      setTip({
+        label: slice.label,
+        value: formatDuration(slice.value, locale),
+        x: box.left + box.width / 2 - wrap.left,
+        y: box.top - wrap.top,
+      });
+    }
+  }
+
   return (
     <div
+      ref={wrapRef}
       data-testid={testId}
       data-chart-type={variant}
       role="region"
       aria-label={ariaLabel}
-      className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
+      className="relative flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") hideTip();
+      }}
     >
       <svg
         width={size}
@@ -137,18 +193,39 @@ export function PieChart({
           } else {
             d = donutSlice(cx, cy, outer, inner, slice.start, slice.end);
           }
+          const duration = formatDuration(slice.value, locale);
           return (
             <path
               key={slice.key}
               data-segment
               data-segment-label={slice.label}
+              tabIndex={0}
+              role="img"
+              aria-label={t("charts.tooltip.a11y", {
+                label: slice.label,
+                value: duration,
+              })}
               d={d}
               fill={slice.color}
-            >
-              <title>
-                {slice.label}: {formatDuration(slice.value, locale)}
-              </title>
-            </path>
+              className="cursor-pointer outline-none focus-visible:stroke-ring focus-visible:stroke-2"
+              onMouseEnter={(e) => showTipFor(slice, e.clientX, e.clientY)}
+              onMouseMove={(e) => showTipFor(slice, e.clientX, e.clientY)}
+              onMouseLeave={hideTip}
+              onFocus={(e) => {
+                const box = e.currentTarget.getBoundingClientRect();
+                const wrap = wrapRef.current?.getBoundingClientRect();
+                if (!wrap) return;
+                setTip({
+                  label: slice.label,
+                  value: duration,
+                  x: box.left + box.width / 2 - wrap.left,
+                  y: box.top - wrap.top,
+                });
+              }}
+              onBlur={hideTip}
+              onClick={(e) => showTipFor(slice, e.clientX, e.clientY)}
+              onKeyDown={(e) => onSliceKeyDown(e, slice)}
+            />
           );
         })}
       </svg>
@@ -175,6 +252,7 @@ export function PieChart({
           </li>
         ))}
       </ul>
+      <ChartTooltip tip={tip} testId="chart-tooltip" />
     </div>
   );
 }

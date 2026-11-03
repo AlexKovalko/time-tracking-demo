@@ -53,7 +53,7 @@ export function EmployeeProfile() {
     q: "",
   });
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
   const [bucket, setBucket] = useState<"day" | "week">("day");
 
   const employeeQuery = useQuery({
@@ -384,6 +384,10 @@ export function EmployeeProfile() {
         limit={pageSize}
         total={total}
         onPageChange={setPage}
+        onLimitChange={(limit) => {
+          setPageSize(limit);
+          setPage(1);
+        }}
       />
     </section>
   );

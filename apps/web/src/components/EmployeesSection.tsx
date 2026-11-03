@@ -65,7 +65,7 @@ export function EmployeesSection() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("people");
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<EmployeeInput>({
@@ -195,6 +195,7 @@ export function EmployeesSection() {
   });
 
   function openCreate() {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.departments });
     setForm({
       name: "",
       departmentId: null,
@@ -227,6 +228,7 @@ export function EmployeesSection() {
   }
 
   function openEdit(employee: Employee) {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.departments });
     setEditTarget(employee);
     setEditForm({
       name: employee.name,
@@ -282,32 +284,62 @@ export function EmployeesSection() {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>{t("employees.department")}</Label>
-          <Select
-            value={deptSelectValue(values.departmentId)}
-            onValueChange={(v) =>
-              onChange({
-                ...values,
-                departmentId: !v || v === NONE_DEPT ? null : v,
-              })
+          {(() => {
+            const orphanId =
+              values.departmentId &&
+              !departments.some((d) => d.id === values.departmentId)
+                ? values.departmentId
+                : null;
+            const deptItems: Record<string, string> = {
+              [NONE_DEPT]: t("employees.department.none"),
+            };
+            if (orphanId) {
+              deptItems[orphanId] = t("employees.department.unknown");
             }
-          >
-            <SelectTrigger
-              data-testid="employee-department-select"
-              className="w-full"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_DEPT}>
-                {t("employees.department.none")}
-              </SelectItem>
-              {departments.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            for (const d of departments) {
+              deptItems[d.id] = d.name;
+            }
+            return (
+              <Select
+                modal={false}
+                value={deptSelectValue(values.departmentId)}
+                onValueChange={(v) =>
+                  onChange({
+                    ...values,
+                    departmentId: !v || v === NONE_DEPT ? null : v,
+                  })
+                }
+                items={deptItems}
+              >
+                <SelectTrigger
+                  data-testid="employee-department-select"
+                  className="w-full"
+                >
+                  <SelectValue
+                    placeholder={t("employees.department.placeholder")}
+                  />
+                </SelectTrigger>
+                <SelectContent data-testid="employee-department-select-content">
+                  <SelectItem
+                    value={NONE_DEPT}
+                    data-testid="employee-department-none"
+                  >
+                    {t("employees.department.none")}
+                  </SelectItem>
+                  {orphanId ? (
+                    <SelectItem value={orphanId}>
+                      {t("employees.department.unknown")}
+                    </SelectItem>
+                  ) : null}
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="employee-title-input">
@@ -470,6 +502,10 @@ export function EmployeesSection() {
             limit={pageSize}
             total={total}
             onPageChange={setPage}
+            onLimitChange={(limit) => {
+              setPageSize(limit);
+              setPage(1);
+            }}
           />
         </>
       ) : (

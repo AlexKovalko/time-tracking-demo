@@ -1,7 +1,12 @@
+import { useRef, useState, type KeyboardEvent } from "react";
 import { chartLabel, chartValue, type ChartBucket } from "@/lib/api";
 import { chartColorAt } from "@/lib/colors";
 import { formatDuration, formatWeekBucketLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import {
+  ChartTooltip,
+  type ChartTooltipState,
+} from "@/components/ChartTooltip";
 
 type Props = {
   data: ChartBucket[];
@@ -16,11 +21,11 @@ type Props = {
   formatLabel?: (raw: string) => string;
 };
 
-const CHART_H = 240;
+const CHART_H = 220;
 const PAD_L = 8;
 const PAD_R = 8;
 const PAD_T = 12;
-const PAD_B = 72;
+const PAD_B = 16;
 
 export function CompactBarChart({
   data,
@@ -32,7 +37,10 @@ export function CompactBarChart({
   bucket = "day",
   formatLabel,
 }: Props) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<ChartTooltipState>(null);
+
   const rows = data.map((row, index) => {
     const raw = chartLabel(row, "");
     const base =
@@ -80,13 +88,59 @@ export function CompactBarChart({
   const gap = 4;
   const barW = Math.max(8, plotW / rows.length - gap);
 
+  function showTipFor(
+    row: (typeof rows)[number],
+    clientX: number,
+    clientY: number,
+  ) {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTip({
+      label: row.label,
+      value: formatDuration(row.value, locale),
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
+  }
+
+  function hideTip() {
+    setTip(null);
+  }
+
+  function onSegmentKeyDown(
+    event: KeyboardEvent<SVGRectElement>,
+    row: (typeof rows)[number],
+  ) {
+    if (event.key === "Escape") {
+      hideTip();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const el = event.currentTarget;
+      const box = el.getBoundingClientRect();
+      const wrap = wrapRef.current?.getBoundingClientRect();
+      if (!wrap) return;
+      setTip({
+        label: row.label,
+        value: formatDuration(row.value, locale),
+        x: box.left + box.width / 2 - wrap.left,
+        y: box.top - wrap.top,
+      });
+    }
+  }
+
   return (
     <div
+      ref={wrapRef}
       data-testid={testId}
       data-chart-layout="compact"
       role="region"
       aria-label={ariaLabel}
-      className="overflow-x-auto rounded-lg border p-3"
+      className="relative overflow-x-auto rounded-lg border p-3"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") hideTip();
+      }}
     >
       <svg
         role="img"
@@ -110,39 +164,51 @@ export function CompactBarChart({
           const h = max > 0 ? (row.value / max) * plotH : 0;
           const x = PAD_L + i * (barW + gap) + gap / 2;
           const y = PAD_T + plotH - h;
-          const labelY = PAD_T + plotH + 10;
+          const duration = formatDuration(row.value, locale);
+          if (row.value <= 0) {
+            return <g key={`${row.key}-${i}`} />;
+          }
           return (
             <g key={`${row.key}-${i}`}>
               <rect
                 data-segment
                 data-segment-label={row.label}
+                tabIndex={0}
+                role="img"
+                aria-label={t("charts.tooltip.a11y", {
+                  label: row.label,
+                  value: duration,
+                })}
                 x={x}
                 y={y}
                 width={barW}
-                height={Math.max(h, row.value > 0 ? 2 : 0)}
+                height={Math.max(h, 2)}
                 fill={row.color}
                 rx={2}
-              >
-                <title>
-                  {row.label}: {formatDuration(row.value, locale)}
-                </title>
-              </rect>
-              <text
-                x={x + barW / 2}
-                y={labelY}
-                textAnchor="middle"
-                className="fill-muted-foreground"
-                style={{ fontSize: 8 }}
-                transform={`rotate(-40 ${x + barW / 2} ${labelY})`}
-              >
-                {row.label.length > 28
-                  ? `${row.label.slice(0, 26)}…`
-                  : row.label}
-              </text>
+                className="cursor-pointer outline-none focus-visible:stroke-ring focus-visible:stroke-2"
+                onMouseEnter={(e) => showTipFor(row, e.clientX, e.clientY)}
+                onMouseMove={(e) => showTipFor(row, e.clientX, e.clientY)}
+                onMouseLeave={hideTip}
+                onFocus={(e) => {
+                  const box = e.currentTarget.getBoundingClientRect();
+                  const wrap = wrapRef.current?.getBoundingClientRect();
+                  if (!wrap) return;
+                  setTip({
+                    label: row.label,
+                    value: duration,
+                    x: box.left + box.width / 2 - wrap.left,
+                    y: box.top - wrap.top,
+                  });
+                }}
+                onBlur={hideTip}
+                onClick={(e) => showTipFor(row, e.clientX, e.clientY)}
+                onKeyDown={(e) => onSegmentKeyDown(e, row)}
+              />
             </g>
           );
         })}
       </svg>
+      <ChartTooltip tip={tip} testId="chart-tooltip" />
       <ul className="sr-only">
         {rows.map((row) => (
           <li key={`full-${row.key}`} data-segment-label>
