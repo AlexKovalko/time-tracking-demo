@@ -29,9 +29,9 @@ test.describe("AC-14 · report list, totals, entry CRUD smoke", () => {
     await expect(entries).toContainText(description);
     await expect(entries).toContainText(name);
 
-    const totals = byTestId(page, tid.reportTotals);
-    await expect(totals).toBeVisible();
-    await expect(totals).toContainText(name);
+    const breakdownTotal = byTestId(page, tid.reportChartBreakdownTotal);
+    await expect(breakdownTotal).toBeVisible({ timeout: 15_000 });
+    await expect(breakdownTotal).toContainText(/\d/);
 
     const row = entries.locator("tbody tr").filter({ hasText: description });
     await expect(row).toHaveCount(1);

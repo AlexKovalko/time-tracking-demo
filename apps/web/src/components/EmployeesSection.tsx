@@ -110,6 +110,13 @@ export function EmployeesSection() {
   const departments = departmentsQuery.data ?? [];
   const employees = employeesQuery.data?.items ?? [];
   const total = employeesQuery.data?.total ?? 0;
+  const employeesLoading =
+    employeesQuery.isPending ||
+    (employeesQuery.isFetching && employees.length === 0);
+  const employeesRefreshing =
+    employeesQuery.isFetching && employees.length > 0;
+  const employeesEmpty =
+    employeesQuery.isSuccess && !employeesQuery.isFetching && total === 0;
 
   async function invalidatePeople() {
     await Promise.all([
@@ -453,8 +460,19 @@ export function EmployeesSection() {
 
       {tab === "people" ? (
         <>
-          <div data-testid="employees-list" className="flex flex-col gap-2">
-            {employees.length === 0 ? (
+          <div
+            data-testid="employees-list"
+            aria-busy={employeesLoading || employeesRefreshing}
+            className={`flex flex-col gap-2 ${employeesRefreshing ? "opacity-60" : ""}`}
+          >
+            {employeesLoading ? (
+              <p
+                data-testid="employees-list-loading"
+                className="px-3 py-6 text-center text-sm text-muted-foreground"
+              >
+                {t("common.loading")}
+              </p>
+            ) : employeesEmpty ? (
               <p className="text-sm text-muted-foreground">
                 {t("employees.empty")}
               </p>

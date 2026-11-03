@@ -228,7 +228,17 @@ export function EntriesSection() {
   const listEntries = listQuery.data?.items ?? [];
   const listTotal = listQuery.data?.total ?? 0;
   const calEntries = calQuery.data ?? [];
-  const listEmpty = view === "list" && !listQuery.isLoading && listTotal === 0;
+  const listLoading =
+    view === "list" &&
+    (listQuery.isPending ||
+      (listQuery.isFetching && listEntries.length === 0));
+  const listRefreshing =
+    view === "list" && listQuery.isFetching && listEntries.length > 0;
+  const listEmpty =
+    view === "list" &&
+    listQuery.isSuccess &&
+    !listQuery.isFetching &&
+    listTotal === 0;
 
   async function invalidateEntries() {
     await Promise.all([
@@ -776,9 +786,17 @@ export function EntriesSection() {
         <>
           <div
             data-testid="entries-list"
-            className="overflow-x-auto rounded-lg border"
+            aria-busy={listLoading || listRefreshing}
+            className={`overflow-x-auto rounded-lg border ${listRefreshing ? "opacity-60" : ""}`}
           >
-            {listEmpty ? (
+            {listLoading ? (
+              <p
+                data-testid="entries-list-loading"
+                className="px-4 py-8 text-center text-sm text-muted-foreground"
+              >
+                {t("common.loading")}
+              </p>
+            ) : listEmpty ? (
               <p
                 data-testid="entries-empty"
                 className="px-4 py-8 text-center text-muted-foreground"

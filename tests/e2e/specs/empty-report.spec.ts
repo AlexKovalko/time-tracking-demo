@@ -24,11 +24,8 @@ test.describe("AC-14 · empty report period", () => {
       /записей нет|no entries/i,
     );
 
-    // Totals present and zero-ish / empty — not an error banner
-    const totals = byTestId(page, tid.reportTotals);
-    if (await totals.count()) {
-      await expect(totals).toBeVisible();
-    }
+    // Side totals list removed — empty chart state instead of report-totals
+    await expect(byTestId(page, tid.reportChartEmpty)).toBeVisible();
 
     // Export disabled when empty (ux.md preference)
     const exportBtn = byTestId(page, tid.reportExportButton);

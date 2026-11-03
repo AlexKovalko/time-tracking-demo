@@ -146,6 +146,7 @@
   "charts.breakdown.title": "Разбивка часов",
   "charts.breakdown.employees": "Сотрудники",
   "charts.breakdown.departments": "Подразделения",
+  "charts.breakdown.totalHours": "всего часов",
   "charts.empty": "Нет данных для графика за период",
   "charts.unassigned": "Без подразделения",
   "charts.a11y.overTime": "Диаграмма часов по времени",

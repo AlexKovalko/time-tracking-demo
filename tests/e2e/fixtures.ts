@@ -144,6 +144,9 @@ export const tid = {
   reportChartBreakdownEmployees: "report-chart-breakdown-employees",
   reportChartBreakdownDepartments: "report-chart-breakdown-departments",
   reportChartEmpty: "report-chart-empty",
+  reportChartBreakdownTotal: "report-chart-breakdown-total",
+  reportPagination: "report-pagination",
+  reportEntriesLoading: "report-entries-loading",
   chartTooltip: "chart-tooltip",
 
   // Delete entry confirm (AC-42)

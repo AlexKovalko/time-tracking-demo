@@ -48,16 +48,16 @@ test.describe("AC-18…19 / AC-31…32 · port & display formats", () => {
       to.toISOString().slice(0, 10),
     );
 
-    const totals = byTestId(page, tid.reportTotals);
-    await expect(totals).toBeVisible({ timeout: 15_000 });
-    const text = await totals.innerText();
+    const total = byTestId(page, tid.reportChartBreakdownTotal);
+    await expect(total).toBeVisible({ timeout: 15_000 });
+    const text = await total.innerText();
     // Prefer human duration suffixes over only hh:mm:ss
     expect(text).toMatch(/\d+\s*[чhмmсs]/);
     expect(text).not.toMatch(/^\d{2}:\d{2}:\d{2}$/m);
 
     await byTestId(page, tid.localeEn).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    const enText = await totals.innerText();
+    const enText = await total.innerText();
     expect(enText).toMatch(/\d+\s*[hms]/);
   });
 

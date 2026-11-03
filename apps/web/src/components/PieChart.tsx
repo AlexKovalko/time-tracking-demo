@@ -16,6 +16,8 @@ type Props = {
   emptyTestId?: string;
   unassignedLabel?: string;
   variant?: "pie" | "donut";
+  /** Optional caption under the center total (donut only). */
+  totalCaption?: string;
 };
 
 function polar(cx: number, cy: number, r: number, angle: number) {
@@ -63,6 +65,7 @@ export function PieChart({
   emptyTestId,
   unassignedLabel,
   variant = "donut",
+  totalCaption,
 }: Props) {
   const { locale, t } = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -110,7 +113,9 @@ export function PieChart({
   const cx = size / 2;
   const cy = size / 2;
   const outer = 88;
-  const inner = variant === "donut" ? 48 : 0;
+  const inner = variant === "donut" ? 52 : 0;
+  const totalFormatted = formatDuration(total, locale);
+  const centerCaption = totalCaption ?? t("charts.breakdown.totalHours");
 
   const slices = rows.reduce<
     Array<(typeof rows)[number] & { start: number; end: number }>
@@ -175,60 +180,78 @@ export function PieChart({
         if (e.key === "Escape") hideTip();
       }}
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        role="img"
-        aria-label={ariaLabel}
-        className="mx-auto shrink-0"
+      <div
+        className="relative mx-auto shrink-0"
+        style={{ width: size, height: size }}
       >
-        {slices.map((slice) => {
-          let d: string;
-          if (inner <= 0) {
-            const start = polar(cx, cy, outer, slice.end);
-            const end = polar(cx, cy, outer, slice.start);
-            const large = slice.end - slice.start > 180 ? 1 : 0;
-            d = `M ${cx} ${cy} L ${start.x} ${start.y} A ${outer} ${outer} 0 ${large} 0 ${end.x} ${end.y} Z`;
-          } else {
-            d = donutSlice(cx, cy, outer, inner, slice.start, slice.end);
-          }
-          const duration = formatDuration(slice.value, locale);
-          return (
-            <path
-              key={slice.key}
-              data-segment
-              data-segment-label={slice.label}
-              tabIndex={0}
-              role="img"
-              aria-label={t("charts.tooltip.a11y", {
-                label: slice.label,
-                value: duration,
-              })}
-              d={d}
-              fill={slice.color}
-              className="cursor-pointer outline-none focus-visible:stroke-ring focus-visible:stroke-2"
-              onMouseEnter={(e) => showTipFor(slice, e.clientX, e.clientY)}
-              onMouseMove={(e) => showTipFor(slice, e.clientX, e.clientY)}
-              onMouseLeave={hideTip}
-              onFocus={(e) => {
-                const box = e.currentTarget.getBoundingClientRect();
-                const wrap = wrapRef.current?.getBoundingClientRect();
-                if (!wrap) return;
-                setTip({
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          role="img"
+          aria-label={ariaLabel}
+          className="block"
+        >
+          {slices.map((slice) => {
+            let d: string;
+            if (inner <= 0) {
+              const start = polar(cx, cy, outer, slice.end);
+              const end = polar(cx, cy, outer, slice.start);
+              const large = slice.end - slice.start > 180 ? 1 : 0;
+              d = `M ${cx} ${cy} L ${start.x} ${start.y} A ${outer} ${outer} 0 ${large} 0 ${end.x} ${end.y} Z`;
+            } else {
+              d = donutSlice(cx, cy, outer, inner, slice.start, slice.end);
+            }
+            const duration = formatDuration(slice.value, locale);
+            return (
+              <path
+                key={slice.key}
+                data-segment
+                data-segment-label={slice.label}
+                tabIndex={0}
+                role="img"
+                aria-label={t("charts.tooltip.a11y", {
                   label: slice.label,
                   value: duration,
-                  x: box.left + box.width / 2 - wrap.left,
-                  y: box.top - wrap.top,
-                });
-              }}
-              onBlur={hideTip}
-              onClick={(e) => showTipFor(slice, e.clientX, e.clientY)}
-              onKeyDown={(e) => onSliceKeyDown(e, slice)}
-            />
-          );
-        })}
-      </svg>
+                })}
+                d={d}
+                fill={slice.color}
+                className="cursor-pointer outline-none focus-visible:stroke-ring focus-visible:stroke-2"
+                onMouseEnter={(e) => showTipFor(slice, e.clientX, e.clientY)}
+                onMouseMove={(e) => showTipFor(slice, e.clientX, e.clientY)}
+                onMouseLeave={hideTip}
+                onFocus={(e) => {
+                  const box = e.currentTarget.getBoundingClientRect();
+                  const wrap = wrapRef.current?.getBoundingClientRect();
+                  if (!wrap) return;
+                  setTip({
+                    label: slice.label,
+                    value: duration,
+                    x: box.left + box.width / 2 - wrap.left,
+                    y: box.top - wrap.top,
+                  });
+                }}
+                onBlur={hideTip}
+                onClick={(e) => showTipFor(slice, e.clientX, e.clientY)}
+                onKeyDown={(e) => onSliceKeyDown(e, slice)}
+              />
+            );
+          })}
+        </svg>
+        {variant === "donut" ? (
+          <div
+            data-testid={`${testId}-total`}
+            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+          >
+            <span className="text-sm font-semibold leading-tight tabular-nums">
+              {totalFormatted}
+            </span>
+            <span className="mt-0.5 text-[0.7rem] leading-tight text-muted-foreground">
+              {centerCaption}
+            </span>
+          </div>
+        ) : null}
+      </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm" role="list">
         {slices.map((slice) => (
           <li

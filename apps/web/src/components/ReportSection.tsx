@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CompactBarChart } from "@/components/CompactBarChart";
+import { PaginationBar } from "@/components/PaginationBar";
 import { PieChart } from "@/components/PieChart";
 import { Button } from "@/components/ui/button";
 import { Trash2Icon } from "lucide-react";
@@ -23,13 +24,13 @@ import {
   type TimeEntry,
 } from "@/lib/api";
 import {
+  endOfMonthIso,
   formatDuration,
   formatInterval,
   fromDatetimeLocalValue,
-  todayIsoDate,
+  startOfMonthIso,
   toDatetimeLocalValue,
 } from "@/lib/format";
-// formatWeekBucketLabel used via CompactBarChart bucket=week
 import { useI18n } from "@/lib/i18n";
 
 function pickSeries(
@@ -44,15 +45,19 @@ function pickSeries(
   return [];
 }
 
+function currentMonthRange() {
+  return { from: startOfMonthIso(), to: endOfMonthIso() };
+}
+
 export function ReportSection() {
   const { t, locale } = useI18n();
   const queryClient = useQueryClient();
-  const [from, setFrom] = useState(todayIsoDate);
-  const [to, setTo] = useState(todayIsoDate);
-  const [applied, setApplied] = useState({
-    from: todayIsoDate(),
-    to: todayIsoDate(),
-  });
+  const initialRange = useMemo(() => currentMonthRange(), []);
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
+  const [applied, setApplied] = useState(initialRange);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [bucket, setBucket] = useState<"day" | "week">("day");
   const [breakdown, setBreakdown] = useState<"employees" | "departments">(
     "employees",
@@ -76,14 +81,16 @@ export function ReportSection() {
       view: "report",
       from: applied.from,
       to: applied.to,
+      page,
+      limit: pageSize,
     }),
-    queryFn: () => api.listTimeEntriesRange(applied.from, applied.to),
-    enabled: !invalidRange,
-  });
-
-  const summaryQuery = useQuery({
-    queryKey: queryKeys.reportSummary(applied.from, applied.to),
-    queryFn: () => api.getReportSummary(applied.from, applied.to),
+    queryFn: () =>
+      api.listTimeEntries({
+        from: applied.from,
+        to: applied.to,
+        page,
+        limit: pageSize,
+      }),
     enabled: !invalidRange,
   });
 
@@ -104,10 +111,15 @@ export function ReportSection() {
     enabled: !invalidRange,
   });
 
-  const entries = entriesQuery.data ?? [];
-  const summary = summaryQuery.data;
+  const entries = entriesQuery.data?.items ?? [];
+  const entriesTotal = entriesQuery.data?.total ?? 0;
+  const entriesLoading =
+    entriesQuery.isPending || (entriesQuery.isFetching && entries.length === 0);
+  const entriesRefreshing = entriesQuery.isFetching && entries.length > 0;
   const isEmpty =
-    !invalidRange && !entriesQuery.isLoading && entries.length === 0;
+    !invalidRange && entriesQuery.isSuccess && !entriesQuery.isFetching
+      ? entriesTotal === 0
+      : false;
 
   const chartsPayload = chartsQuery.data as Record<string, unknown> | undefined;
   const overTime = pickSeries(chartsPayload, [
@@ -121,41 +133,13 @@ export function ReportSection() {
     "series",
   ]);
 
-  // Client fallback from entries when charts API empty/missing
-  const clientOverTime = useMemo(() => {
-    if (overTime.length > 0) return overTime;
-    const map = new Map<string, number>();
-    for (const entry of entries) {
-      if (entry.stop == null) continue;
-      const key = entry.start.slice(0, 10);
-      map.set(key, (map.get(key) ?? 0) + (entry.durationSeconds ?? 0));
-    }
-    return [...map.entries()].map(([date, totalDurationSeconds]) => ({
-      date,
-      label: date,
-      totalDurationSeconds,
-    }));
-  }, [overTime, entries]);
-
-  const clientBreakdown = useMemo(() => {
-    if (breakdownSeries.length > 0) return breakdownSeries;
-    const map = new Map<string, { label: string; total: number }>();
-    for (const entry of entries) {
-      if (entry.stop == null) continue;
-      const label = entry.employeeName ?? entry.employeeId;
-      const prev = map.get(entry.employeeId) ?? { label, total: 0 };
-      prev.total += entry.durationSeconds ?? 0;
-      map.set(entry.employeeId, prev);
-    }
-    return [...map.entries()].map(([key, v]) => ({
-      key,
-      label: v.label,
-      totalDurationSeconds: v.total,
-    }));
-  }, [breakdownSeries, entries]);
+  // Charts come from the reports API — do not rebuild from a paginated entries page.
+  const clientOverTime = overTime;
+  const clientBreakdown = breakdownSeries;
 
   const chartsEmpty =
     !chartsQuery.isLoading &&
+    !chartsQuery.isFetching &&
     clientOverTime.every((r) => chartValue(r) === 0) &&
     clientBreakdown.every((r) => chartValue(r) === 0);
 
@@ -214,12 +198,6 @@ export function ReportSection() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [deleteEntry]);
 
-
-
-
-
-
-
   async function invalidateReport() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["time-entries"] }),
@@ -234,6 +212,7 @@ export function ReportSection() {
       return;
     }
     setRangeError(null);
+    setPage(1);
     setApplied({ from, to });
   }
 
@@ -265,8 +244,6 @@ export function ReportSection() {
     setEditError(null);
   }
 
-  const totalsRows = useMemo(() => summary?.employees ?? [], [summary]);
-
   return (
     <section
       id="report"
@@ -281,7 +258,7 @@ export function ReportSection() {
           type="button"
           data-testid="report-export-button"
           variant="outline"
-          disabled={isEmpty || exporting || invalidRange}
+          disabled={isEmpty || exporting || invalidRange || entriesLoading}
           title={isEmpty ? t("report.export.disabledEmpty") : undefined}
           onClick={onExport}
         >
@@ -412,33 +389,8 @@ export function ReportSection() {
           ariaLabel={t("charts.a11y.breakdown")}
           unassignedLabel={t("charts.unassigned")}
           variant="donut"
+          totalCaption={t("charts.breakdown.totalHours")}
         />
-      </div>
-
-      <div data-testid="report-totals" className="rounded-lg border p-4">
-        <h3 className="mb-2 font-medium">{t("report.totals.title")}</h3>
-        {totalsRows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {formatDuration(0, locale)} — {t("report.totals.grand")}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1 text-sm">
-            {totalsRows.map((row) => (
-              <li key={row.employeeId} className="flex justify-between gap-4">
-                <span>{row.name}</span>
-                <span className="tabular-nums">
-                  {formatDuration(row.totalDurationSeconds, locale)}
-                </span>
-              </li>
-            ))}
-            <li className="mt-2 flex justify-between gap-4 border-t pt-2 font-medium">
-              <span>{t("report.totals.grand")}</span>
-              <span className="tabular-nums">
-                {formatDuration(summary?.grandTotalSeconds ?? 0, locale)}
-              </span>
-            </li>
-          </ul>
-        )}
       </div>
 
       {isEmpty ? (
@@ -452,9 +404,17 @@ export function ReportSection() {
 
       <div
         data-testid="report-entries"
-        className="overflow-x-auto rounded-lg border"
+        aria-busy={entriesLoading || entriesRefreshing}
+        className={`overflow-x-auto rounded-lg border ${entriesRefreshing ? "opacity-60" : ""}`}
       >
-        {entries.length > 0 ? (
+        {entriesLoading ? (
+          <p
+            data-testid="report-entries-loading"
+            className="px-4 py-8 text-center text-sm text-muted-foreground"
+          >
+            {t("common.loading")}
+          </p>
+        ) : entries.length > 0 ? (
           <table className="w-full min-w-[40rem] text-left text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
@@ -508,6 +468,20 @@ export function ReportSection() {
           </table>
         ) : null}
       </div>
+
+      {!invalidRange && entriesTotal > 0 ? (
+        <PaginationBar
+          testId="report-pagination"
+          page={page}
+          limit={pageSize}
+          total={entriesTotal}
+          onPageChange={setPage}
+          onLimitChange={(limit) => {
+            setPageSize(limit);
+            setPage(1);
+          }}
+        />
+      ) : null}
 
       <Dialog
         open={!!editEntry}

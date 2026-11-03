@@ -22,20 +22,18 @@ test.describe("AC-16 / AC-27…29 · report charts (#47, #58–#60)", () => {
     from.setDate(from.getDate() - 28);
     await setReportPeriod(page, localIso(from), localIso(to));
 
-    const totals = byTestId(page, tid.reportTotals);
-    await expect(totals).toBeVisible({ timeout: 15_000 });
-    // Flex rows put name + duration across spans; count employee <li> (exclude grand total)
+    const chart = byTestId(page, tid.reportChartBreakdown);
+    await expect(chart).toBeVisible({ timeout: 15_000 });
+    const total = byTestId(page, tid.reportChartBreakdownTotal);
+    await expect(total).toBeVisible({ timeout: 15_000 });
+    await expect(total).toContainText(/\d/);
+    await expect(total).toContainText(/всего часов|total hours/i);
+    // Segments + side color legend — at least 2 colored slices
     await expect
-      .poll(
-        async () =>
-          totals
-            .locator("li")
-            .filter({ hasNotText: /итого|total|grand/i })
-            .count(),
-        { timeout: 15_000 },
-      )
+      .poll(async () => chart.locator("[data-segment]").count(), {
+        timeout: 15_000,
+      })
       .toBeGreaterThanOrEqual(2);
-    await expect(totals).toContainText(/\d/);
   });
 
   test("hours-over-time chart with day|week toggle (AC-27 #58)", async ({

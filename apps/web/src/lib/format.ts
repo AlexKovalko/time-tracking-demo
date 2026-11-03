@@ -155,6 +155,16 @@ export function toIsoDate(date: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** First calendar day of the month containing `date` (local), as YYYY-MM-DD. */
+export function startOfMonthIso(date = new Date()): string {
+  return toIsoDate(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+/** Last calendar day of the month containing `date` (local), as YYYY-MM-DD. */
+export function endOfMonthIso(date = new Date()): string {
+  return toIsoDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+}
+
 /** Local calendar date (YYYY-MM-DD) of an ISO timestamp. */
 export function localIsoDateFromTimestamp(iso: string): string {
   const d = new Date(iso);

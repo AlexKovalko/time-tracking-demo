@@ -146,6 +146,7 @@
   "charts.breakdown.title": "Hours breakdown",
   "charts.breakdown.employees": "Employees",
   "charts.breakdown.departments": "Departments",
+  "charts.breakdown.totalHours": "total hours",
   "charts.empty": "No chart data for this period",
   "charts.unassigned": "Unassigned",
   "charts.a11y.overTime": "Hours over time chart",
