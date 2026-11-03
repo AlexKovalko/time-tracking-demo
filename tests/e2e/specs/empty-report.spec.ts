@@ -1,10 +1,17 @@
-import { test, expect, tid, byTestId, setReportPeriod } from "../fixtures";
+import {
+  test,
+  expect,
+  tid,
+  byTestId,
+  setReportPeriod,
+  stickyTimerRoot,
+} from "../fixtures";
 
 /**
- * AC-10 (+ AC-13 journey b)
+ * time-tracking-ui AC-14 (empty report non-regression)
  * Empty report period shows empty state; app does not crash.
  */
-test.describe("AC-10 · empty report period", () => {
+test.describe("AC-14 · empty report period", () => {
   test("shows empty state for a far-future period without crashing", async ({
     openApp: page,
   }) => {
@@ -27,8 +34,12 @@ test.describe("AC-10 · empty report period", () => {
     const exportBtn = byTestId(page, tid.reportExportButton);
     await expect(exportBtn).toBeDisabled();
 
-    // App chrome still usable
-    await expect(byTestId(page, tid.employeesNameInput)).toBeVisible();
-    await expect(byTestId(page, tid.timerStartButton)).toBeVisible();
+    // App chrome still usable on Report route (AC-1 / AC-6 / AC-14 shell)
+    await expect(page).toHaveURL(/\/report\/?$/);
+    await expect(byTestId(page, tid.navReport)).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(stickyTimerRoot(page)).toBeVisible();
   });
 });

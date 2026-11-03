@@ -1,9 +1,10 @@
 import { test, expect, tid, byTestId, createEmployeeUi } from "../fixtures";
 
 /**
- * AC-15 — full employee CRUD (update + delete after AC-1 create).
+ * time-tracking-ui AC-5 — employee update + delete non-regression (baseline CRUD).
+ * Prefer employees-edit-dialog; keep role fallback for resilience.
  */
-test.describe("AC-15 · employee update and delete", () => {
+test.describe("AC-5 · employee update and delete", () => {
   test("updates name and deletes employee without full page reload", async ({
     openApp: page,
   }) => {
@@ -13,21 +14,28 @@ test.describe("AC-15 · employee update and delete", () => {
     await createEmployeeUi(page, original);
 
     const list = byTestId(page, tid.employeesList);
-    // Prefer stable row testid; fall back to exact name span (renamed contains original as substring).
     let row = list.locator(`[data-testid^="employee-row-"]`).filter({
       has: page.getByText(original, { exact: true }),
     });
     if ((await row.count()) === 0) {
-      row = list.getByText(original, { exact: true }).locator("xpath=ancestor::div[contains(@class,'border')][1]");
+      row = list
+        .getByText(original, { exact: true })
+        .locator("xpath=ancestor::div[contains(@class,'border')][1]");
     }
     await row.getByRole("button", { name: /изменить|edit/i }).click();
 
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("textbox").fill(renamed);
-    await dialog.getByRole("button", { name: /сохранить|save/i }).click();
+    const editDialog = byTestId(page, tid.employeesEditDialog);
+    if (await editDialog.count()) {
+      await expect(editDialog).toBeVisible();
+      await byTestId(page, tid.employeesNameInput).fill(renamed);
+      await editDialog.getByRole("button", { name: /сохранить|save/i }).click();
+    } else {
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole("textbox").fill(renamed);
+      await dialog.getByRole("button", { name: /сохранить|save/i }).click();
+    }
 
-    // Exact match: renamed ("… Renamed") still contains original as substring — do not use toContainText(original).
     await expect(list.getByText(renamed, { exact: true })).toBeVisible();
     await expect(list.getByText(original, { exact: true })).toHaveCount(0);
 

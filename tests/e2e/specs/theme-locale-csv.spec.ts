@@ -6,13 +6,17 @@ import {
   createEmployeeUi,
   startTimerUi,
   setReportPeriod,
+  gotoEntries,
+  stickyTimerRoot,
 } from "../fixtures";
 
 /**
- * AC-19 theme, AC-20 locale, AC-18 CSV export (capacity extras).
+ * time-tracking-ui AC-15 (theme/locale) + AC-14 CSV export smoke.
  */
-test.describe("AC-19 / AC-20 / AC-18 · theme, locale, CSV", () => {
-  test("toggles theme on primary surface (AC-19)", async ({ openApp: page }) => {
+test.describe("AC-15 / AC-14 · theme, locale, CSV", () => {
+  test("toggles theme on chrome and sticky timer surfaces (AC-15)", async ({
+    openApp: page,
+  }) => {
     const root = page.locator("html");
     const beforeDark = await root.evaluate(
       (el) =>
@@ -31,17 +35,20 @@ test.describe("AC-19 / AC-20 / AC-18 · theme, locale, CSV", () => {
         );
       })
       .not.toBe(beforeDark);
+
+    // New surfaces still present under toggled theme
+    await expect(byTestId(page, tid.navEmployees)).toBeVisible();
+    await expect(stickyTimerRoot(page)).toBeVisible();
   });
 
-  test("switches locale ru ↔ en for key labels (AC-20)", async ({
+  test("switches locale ru ↔ en for nav and section labels (AC-15)", async ({
     openApp: page,
   }) => {
     const switcher = byTestId(page, tid.localeSwitcher);
     await expect(switcher).toBeVisible();
 
-    // Explicit EN control (ToggleGroup buttons with data-testid)
-    const enBtn = page.getByTestId("locale-en");
-    const ruBtn = page.getByTestId("locale-ru");
+    const enBtn = byTestId(page, tid.localeEn);
+    const ruBtn = byTestId(page, tid.localeRu);
     await expect(enBtn).toBeVisible();
     await expect(ruBtn).toBeVisible();
 
@@ -49,10 +56,12 @@ test.describe("AC-19 / AC-20 / AC-18 · theme, locale, CSV", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ru", {
       timeout: 10_000,
     });
-    // Exact heading — avoid strict-mode match on all section titles at once
     await expect(
       page.getByRole("heading", { name: "Сотрудники", exact: true }),
     ).toBeVisible();
+    await expect(byTestId(page, tid.navEntries)).toContainText(
+      /записи времени|time entries/i,
+    );
 
     await enBtn.click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en", {
@@ -61,9 +70,15 @@ test.describe("AC-19 / AC-20 / AC-18 · theme, locale, CSV", () => {
     await expect(
       page.getByRole("heading", { name: "Employees", exact: true }),
     ).toBeVisible();
+    await expect(byTestId(page, tid.navEntries)).toContainText(/time entries/i);
+
+    await gotoEntries(page);
+    await expect(
+      page.getByRole("heading", { name: /time entries|записи времени/i }),
+    ).toBeVisible();
   });
 
-  test("exports CSV for a period with data (AC-18)", async ({ openApp: page }) => {
+  test("exports CSV for a period with data (AC-14)", async ({ openApp: page }) => {
     const name = `QA CSV ${Date.now()}`;
     await createEmployeeUi(page, name);
     await startTimerUi(page, name, "CSV export task");

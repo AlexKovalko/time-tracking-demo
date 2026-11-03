@@ -8,7 +8,7 @@ import {
 } from "../fixtures";
 
 /**
- * AC-7 — after Stop, same employee can Start again.
+ * time-tracking-ui AC-7 — after Stop, same employee can Start again.
  */
 test.describe("AC-7 · start again after stop", () => {
   test("allows a new Start cycle for the same employee after Stop", async ({

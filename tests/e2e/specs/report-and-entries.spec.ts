@@ -9,14 +9,13 @@ import {
 } from "../fixtures";
 
 /**
- * AC-8, AC-9, AC-16 — report list/totals + entry delete smoke.
+ * time-tracking-ui AC-14 — report list/totals + entry delete smoke.
  */
-test.describe("AC-8 / AC-9 / AC-16 · report list, totals, entry CRUD smoke", () => {
+test.describe("AC-14 · report list, totals, entry CRUD smoke", () => {
   test("shows entries and per-employee totals; can delete an entry", async ({
     openApp: page,
   }) => {
     const name = `QA Report ${Date.now()}`;
-    // Unique description — avoid matching seeded / prior rows with same label
     const description = `Report list task ${Date.now()}`;
     await createEmployeeUi(page, name);
     await startTimerUi(page, name, description);
