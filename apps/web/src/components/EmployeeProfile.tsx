@@ -1,18 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { BarChart } from "@/components/BarChart";
+import { CompactBarChart } from "@/components/CompactBarChart";
 import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api, queryKeys } from "@/lib/api";
+import {
+  api,
+  chartValue,
+  queryKeys,
+  type ChartBucket,
+} from "@/lib/api";
 import {
   formatDuration,
   formatInterval,
+  formatWeekBucketLabel,
   todayIsoDate,
   toIsoDate,
 } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+
+function pickSeries(
+  payload: Record<string, unknown> | undefined,
+  keys: string[],
+): ChartBucket[] {
+  if (!payload) return [];
+  for (const key of keys) {
+    const val = payload[key];
+    if (Array.isArray(val)) return val as ChartBucket[];
+  }
+  return [];
+}
 
 export function EmployeeProfile() {
   const { id = "" } = useParams<{ id: string }>();
@@ -34,6 +54,7 @@ export function EmployeeProfile() {
   });
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const [bucket, setBucket] = useState<"day" | "week">("day");
 
   const employeeQuery = useQuery({
     queryKey: queryKeys.employee(id),
@@ -46,6 +67,19 @@ export function EmployeeProfile() {
     queryFn: () => api.getEmployeeStats(id, applied.from, applied.to),
     enabled: !!id,
     retry: false,
+  });
+
+  // Charts ignore q (AC-35) — keyed only by period + bucket
+  const chartsQuery = useQuery({
+    queryKey: queryKeys.employeeCharts(id, applied.from, applied.to, bucket),
+    queryFn: () =>
+      api.getReportCharts({
+        from: applied.from,
+        to: applied.to,
+        bucket,
+        employeeId: id,
+      }),
+    enabled: !!id,
   });
 
   const entriesQuery = useQuery({
@@ -75,7 +109,6 @@ export function EmployeeProfile() {
   const total = entriesQuery.data?.total ?? 0;
   const isEmpty = !entriesQuery.isLoading && total === 0;
 
-  // Fallback stats from entries page if /stats missing
   const fallbackDuration = entries.reduce(
     (sum, e) => sum + (e.durationSeconds ?? 0),
     0,
@@ -87,17 +120,25 @@ export function EmployeeProfile() {
   const entryCount =
     stats?.entryCount ?? (statsQuery.isError ? total : undefined);
 
+  const chartsPayload = chartsQuery.data as Record<string, unknown> | undefined;
+  const overTime = pickSeries(chartsPayload, ["overTime", "series", "buckets"]);
+  const descriptionBreakdown = pickSeries(chartsPayload, [
+    "descriptionBreakdown",
+    "descriptions",
+    "byDescription",
+  ]);
+
+  const chartsEmpty =
+    !chartsQuery.isLoading &&
+    overTime.every((r) => chartValue(r) === 0) &&
+    descriptionBreakdown.every((r) => chartValue(r) === 0);
+
   function apply() {
     setApplied({ from, to, q: q.trim() });
     setPage(1);
   }
 
-  const metaParts = [
-    employee?.title,
-    employee?.department?.name,
-    employee?.email,
-    employee?.phone,
-  ].filter(Boolean);
+  const dash = t("profile.info.empty");
 
   return (
     <section
@@ -113,7 +154,7 @@ export function EmployeeProfile() {
         {t("profile.back")}
       </Link>
 
-      <header className="flex flex-col gap-1">
+      <header className="flex flex-col gap-2">
         <h1
           id="employee-profile-name"
           data-testid="employee-profile-name"
@@ -121,11 +162,38 @@ export function EmployeeProfile() {
         >
           {employee?.name || t("employees.unnamed")}
         </h1>
-        {metaParts.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {metaParts.join(" · ")}
-          </p>
-        ) : null}
+        <dl
+          data-testid="employee-profile-info"
+          className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-2"
+        >
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-muted-foreground">{t("profile.info.title")}</dt>
+            <dd data-testid="employee-profile-info-title">
+              {employee?.title?.trim() || dash}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-muted-foreground">
+              {t("profile.info.department")}
+            </dt>
+            <dd data-testid="employee-profile-info-department">
+              {employee?.department?.name?.trim() ||
+                t("employees.department.none")}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-muted-foreground">{t("profile.info.email")}</dt>
+            <dd data-testid="employee-profile-info-email">
+              {employee?.email?.trim() || dash}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-muted-foreground">{t("profile.info.phone")}</dt>
+            <dd data-testid="employee-profile-info-phone">
+              {employee?.phone?.trim() || dash}
+            </dd>
+          </div>
+        </dl>
       </header>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
@@ -195,6 +263,74 @@ export function EmployeeProfile() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Profile charts between stats and entries (AC-33…35) */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-medium">{t("charts.overTime.title")}</h2>
+          <div className="flex gap-1" role="group">
+            <Button
+              type="button"
+              size="sm"
+              variant={bucket === "day" ? "default" : "outline"}
+              data-testid="employee-profile-chart-over-time-day"
+              aria-pressed={bucket === "day"}
+              onClick={() => setBucket("day")}
+            >
+              {t("charts.overTime.day")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={bucket === "week" ? "default" : "outline"}
+              data-testid="employee-profile-chart-over-time-week"
+              aria-pressed={bucket === "week"}
+              onClick={() => setBucket("week")}
+            >
+              {t("charts.overTime.week")}
+            </Button>
+          </div>
+        </div>
+        {chartsEmpty ? (
+          <div
+            data-testid="employee-profile-chart-over-time"
+            data-chart-layout="compact"
+            role="region"
+            aria-label={t("charts.a11y.overTime")}
+            className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
+          >
+            <p data-testid="employee-profile-chart-empty">
+              {t("charts.empty")}
+            </p>
+          </div>
+        ) : (
+          <CompactBarChart
+            testId="employee-profile-chart-over-time"
+            data={overTime}
+            bucket={bucket}
+            emptyLabel={t("charts.empty")}
+            emptyTestId="employee-profile-chart-empty"
+            ariaLabel={t("charts.a11y.overTime")}
+            unassignedLabel={t("charts.unassigned")}
+            formatLabel={
+              bucket === "week"
+                ? (raw) => formatWeekBucketLabel(raw, locale)
+                : undefined
+            }
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h2 className="font-medium">{t("charts.description.title")}</h2>
+        <BarChart
+          testId="employee-profile-chart-description"
+          data={chartsEmpty ? [] : descriptionBreakdown}
+          emptyLabel={t("charts.empty")}
+          ariaLabel={t("charts.a11y.description")}
+          unassignedLabel={t("charts.untitled")}
+        />
       </div>
 
       <div

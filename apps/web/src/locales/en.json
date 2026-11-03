@@ -169,5 +169,13 @@
   "report.errors.loadFailed": "Could not load report",
   "common.loading": "Loading…",
   "common.retry": "Retry",
-  "common.confirm": "Confirm"
+  "common.confirm": "Confirm",
+  "charts.untitled": "Untitled",
+  "charts.description.title": "Breakdown by description",
+  "charts.a11y.description": "Hours by description chart",
+  "profile.info.title": "Title",
+  "profile.info.department": "Department",
+  "profile.info.email": "Email",
+  "profile.info.phone": "Phone",
+  "profile.info.empty": "—"
 }

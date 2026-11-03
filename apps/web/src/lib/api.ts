@@ -56,6 +56,7 @@ export type ReportCharts = {
   series?: ChartBucket[];
   buckets?: ChartBucket[];
   breakdown?: ChartBucket[];
+  descriptionBreakdown?: ChartBucket[];
   items?: ChartBucket[];
 };
 
@@ -350,12 +351,14 @@ export const api = {
     to: string;
     bucket?: "day" | "week";
     breakdown?: "employees" | "departments";
+    employeeId?: string;
   }): Promise<ReportCharts> => {
     const q = new URLSearchParams();
     q.set("from", params.from);
     q.set("to", params.to);
     if (params.bucket) q.set("bucket", params.bucket);
     if (params.breakdown) q.set("breakdown", params.breakdown);
+    if (params.employeeId) q.set("employeeId", params.employeeId);
     try {
       const { data } = await request<ReportCharts>(`/api/reports/charts?${q}`);
       return data ?? {};
@@ -392,6 +395,12 @@ export const queryKeys = {
     ["reports", "summary", from, to] as const,
   reportCharts: (from: string, to: string, bucket: string, breakdown: string) =>
     ["reports", "charts", from, to, bucket, breakdown] as const,
+  employeeCharts: (
+    id: string,
+    from: string,
+    to: string,
+    bucket: string,
+  ) => ["employees", id, "charts", from, to, bucket] as const,
 };
 
 export function chartValue(row: ChartBucket): number {

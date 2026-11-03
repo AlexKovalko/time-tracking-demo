@@ -210,3 +210,63 @@ export function snapMinutes(date: Date, step = 15): Date {
   }
   return d;
 }
+
+function padDatePart(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** ISO week number (1–53) for a local calendar date. */
+export function isoWeekNumber(date: Date): number {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}
+
+/** Monday of ISO week `week` in ISO week-year `year` (local). */
+export function mondayOfIsoWeek(year: number, week: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const week1Monday = startOfIsoWeek(jan4);
+  return addDays(week1Monday, (week - 1) * 7);
+}
+
+function parseWeekStart(weekStart: Date | string): Date {
+  if (weekStart instanceof Date) {
+    return startOfIsoWeek(weekStart);
+  }
+  const isoWeek = weekStart.match(/^(\d{4})-W(\d{1,2})$/i);
+  if (isoWeek) {
+    return mondayOfIsoWeek(Number(isoWeek[1]), Number(isoWeek[2]));
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(weekStart)) {
+    const [y, m, d] = weekStart.slice(0, 10).split("-").map(Number);
+    return startOfIsoWeek(new Date(y, m - 1, d));
+  }
+  const parsed = new Date(weekStart);
+  if (!Number.isNaN(parsed.getTime())) {
+    return startOfIsoWeek(parsed);
+  }
+  return startOfIsoWeek(new Date());
+}
+
+/**
+ * Week bucket label for Report + Profile over-time week mode (AC-44).
+ * Format: `DD.MM.YYYY - DD.MM.YYYY (N неделя)` / en `(week N)`.
+ * Must NOT be ISO `YYYY-Www`.
+ */
+export function formatWeekBucketLabel(
+  weekStart: Date | string,
+  locale: string,
+): string {
+  const start = parseWeekStart(weekStart);
+  const end = addDays(start, 6);
+  const weekNum = isoWeekNumber(start);
+  const span = `${padDatePart(start.getDate())}.${padDatePart(start.getMonth() + 1)}.${start.getFullYear()} - ${padDatePart(end.getDate())}.${padDatePart(end.getMonth() + 1)}.${end.getFullYear()}`;
+  const lang = normalizeLocale(locale);
+  const suffix = lang === "ru" ? `${weekNum} неделя` : `week ${weekNum}`;
+  return `${span} (${suffix})`;
+}
+
+/** Alias kept for callers that prefer the shorter name. */
+export const formatWeekBucket = formatWeekBucketLabel;

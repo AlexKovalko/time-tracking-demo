@@ -1,4 +1,5 @@
 import { chartLabel, chartValue, type ChartBucket } from "@/lib/api";
+import { chartColorAt } from "@/lib/colors";
 import { formatDuration } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ type Props = {
   testId: string;
   emptyTestId?: string;
   unassignedLabel?: string;
+  formatLabel?: (raw: string) => string;
 };
 
 export function BarChart({
@@ -19,15 +21,22 @@ export function BarChart({
   testId,
   emptyTestId,
   unassignedLabel,
+  formatLabel,
 }: Props) {
   const { locale } = useI18n();
-  const rows = data.map((row) => {
+  const rows = data.map((row, index) => {
     const raw = chartLabel(row, "");
-    const label =
+    const base =
       !raw || raw === "unassigned" || raw === "null"
-        ? unassignedLabel ?? (raw || "—")
+        ? (unassignedLabel ?? (raw || "—"))
         : raw;
-    return { label, value: chartValue(row) };
+    const label = formatLabel ? formatLabel(base) : base;
+    return {
+      label,
+      value: chartValue(row),
+      color: chartColorAt(index),
+      key: raw || String(index),
+    };
   });
   const max = Math.max(0, ...rows.map((r) => r.value));
   const hasData = rows.some((r) => r.value > 0);
@@ -56,7 +65,12 @@ export function BarChart({
         {rows.map((row) => {
           const pct = max > 0 ? (row.value / max) * 100 : 0;
           return (
-            <li key={row.label} className="flex flex-col gap-1 text-sm">
+            <li
+              key={row.key}
+              data-segment
+              data-segment-label={row.label}
+              className="flex flex-col gap-1 text-sm"
+            >
               <div className="flex justify-between gap-2">
                 <span className="truncate">{row.label}</span>
                 <span className="shrink-0 tabular-nums text-muted-foreground">
@@ -65,8 +79,8 @@ export function BarChart({
               </div>
               <div className="h-2 overflow-hidden rounded bg-muted">
                 <div
-                  className={cn("h-full rounded bg-primary")}
-                  style={{ width: `${pct}%` }}
+                  className={cn("h-full rounded")}
+                  style={{ width: `${pct}%`, backgroundColor: row.color }}
                   role="img"
                   aria-label={`${row.label}: ${formatDuration(row.value, locale)}`}
                 />
