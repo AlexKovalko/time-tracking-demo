@@ -5,9 +5,7 @@ export function formatDuration(
 ): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const suf =
-    locale === 'ru'
-      ? { h: 'ч', m: 'м', s: 'с' }
-      : { h: 'h', m: 'm', s: 's' };
+    locale === 'ru' ? { h: 'ч', m: 'м', s: 'с' } : { h: 'h', m: 'm', s: 's' };
 
   if (s === 0) {
     return `0${suf.s}`;

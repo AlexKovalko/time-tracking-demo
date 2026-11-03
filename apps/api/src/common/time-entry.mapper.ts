@@ -30,7 +30,10 @@ export function mapTimeEntry(row: TimeEntryRow): TimeEntryDto {
   };
 }
 
-export function computeDurationSeconds(startIso: string, stopIso: string): number {
+export function computeDurationSeconds(
+  startIso: string,
+  stopIso: string,
+): number {
   const startMs = Date.parse(startIso);
   const stopMs = Date.parse(stopIso);
   if (Number.isNaN(startMs) || Number.isNaN(stopMs)) {
@@ -40,7 +43,10 @@ export function computeDurationSeconds(startIso: string, stopIso: string): numbe
 }
 
 /** Inclusive YYYY-MM-DD bounds → ISO range covering the whole days (UTC calendar dates). */
-export function periodBounds(from: string, to: string): { fromIso: string; toIso: string } {
+export function periodBounds(
+  from: string,
+  to: string,
+): { fromIso: string; toIso: string } {
   return {
     fromIso: `${from}T00:00:00.000Z`,
     toIso: `${to}T23:59:59.999Z`,

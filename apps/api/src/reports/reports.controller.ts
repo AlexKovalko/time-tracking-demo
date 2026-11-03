@@ -20,6 +20,7 @@ export class ReportsController {
       query.to,
       query.bucket ?? 'day',
       query.breakdown ?? 'employees',
+      query.employeeId,
     );
   }
 

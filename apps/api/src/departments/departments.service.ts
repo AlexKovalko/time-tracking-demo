@@ -72,9 +72,7 @@ export class DepartmentsService {
     this.findOne(id);
     const assigned = (
       this.database.connection
-        .prepare(
-          'SELECT COUNT(*) AS c FROM employees WHERE department_id = ?',
-        )
+        .prepare('SELECT COUNT(*) AS c FROM employees WHERE department_id = ?')
         .get(id) as { c: number }
     ).c;
     if (assigned > 0) {

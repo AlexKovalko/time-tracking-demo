@@ -68,9 +68,7 @@ export class TimersService {
 
     const existing = this.findRunningForEmployee(dto.employeeId);
     if (existing) {
-      throw new ConflictException(
-        'Employee already has a running timer',
-      );
+      throw new ConflictException('Employee already has a running timer');
     }
 
     const id = randomUUID();

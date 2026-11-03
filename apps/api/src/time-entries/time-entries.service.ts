@@ -5,11 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import {
-  clampPage,
-  clampPageLimit,
-  Paginated,
-} from '../common/pagination';
+import { clampPage, clampPageLimit, Paginated } from '../common/pagination';
 import {
   computeDurationSeconds,
   mapTimeEntry,
@@ -50,9 +46,7 @@ export class TimeEntriesService {
 
     if (!paginate) {
       const rows = this.database.connection
-        .prepare(
-          `${this.baseSelect()} ${whereSql} ORDER BY te.start DESC`,
-        )
+        .prepare(`${this.baseSelect()} ${whereSql} ORDER BY te.start DESC`)
         .all(...whereParams) as TimeEntryRow[];
       return rows.map(mapTimeEntry);
     }
@@ -121,7 +115,14 @@ export class TimeEntriesService {
         `INSERT INTO time_entries (id, employee_id, description, start, stop, duration_seconds)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, dto.employeeId, dto.description, dto.start, stop, durationSeconds);
+      .run(
+        id,
+        dto.employeeId,
+        dto.description,
+        dto.start,
+        stop,
+        durationSeconds,
+      );
 
     return this.findOne(id);
   }

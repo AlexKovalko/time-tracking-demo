@@ -169,7 +169,8 @@ export class SeedService implements OnModuleInit {
         const id = randomUUID();
         const departmentId = departmentIds[index % departmentIds.length];
         // Majority get title + contact; leave last without phone for optional demo
-        const phone = index < EMPLOYEE_PROFILES.length - 1 ? profile.phone : null;
+        const phone =
+          index < EMPLOYEE_PROFILES.length - 1 ? profile.phone : null;
         insertEmployee.run(
           id,
           profile.name,
@@ -184,6 +185,34 @@ export class SeedService implements OnModuleInit {
       let entries = 0;
       const now = Date.now();
       const dayMs = 86_400_000;
+
+      // First employee: deterministic dense days/weeks + ≥2 description labels
+      // so profile charts (AC-33…36) are nonzero after force reseed.
+      const chartEmployeeId = employeeIds[0];
+      const chartDescriptions = [
+        WORK_DESCRIPTIONS[0],
+        WORK_DESCRIPTIONS[1],
+        WORK_DESCRIPTIONS[2],
+        '', // Untitled bucket
+      ];
+      for (let dayOffset = 0; dayOffset < 21; dayOffset += 1) {
+        const desc = chartDescriptions[dayOffset % chartDescriptions.length];
+        const startDate = new Date(now - dayOffset * dayMs);
+        startDate.setUTCHours(9 + (dayOffset % 4), 15, 0, 0);
+        const durationSec = 3600 + (dayOffset % 5) * 900;
+        const stopDate = new Date(startDate.getTime() + durationSec * 1000);
+        const start = startDate.toISOString();
+        const stop = stopDate.toISOString();
+        insertEntry.run(
+          randomUUID(),
+          chartEmployeeId,
+          desc,
+          start,
+          stop,
+          computeDurationSeconds(start, stop),
+        );
+        entries += 1;
+      }
 
       employeeIds.forEach((employeeId, empIndex) => {
         // Dense: ~10–14 closed entries per employee across last 28 days

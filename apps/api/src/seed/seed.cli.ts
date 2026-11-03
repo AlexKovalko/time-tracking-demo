@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   try {
     const seed = app.get(SeedService);
     const result = seed.seedIfEmpty(force);
-    // eslint-disable-next-line no-console
+
     console.log(
       force
         ? `Force reseed done: ${JSON.stringify(result)}`
@@ -39,7 +39,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });

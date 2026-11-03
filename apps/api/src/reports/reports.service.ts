@@ -28,11 +28,24 @@ export type ReportCharts = {
   breakdown: ChartBucketRow[];
 };
 
+/** Employee profile charts (AC-33…36): overTime + description breakdown. */
+export type EmployeeCharts = {
+  overTime: ChartBucketRow[];
+  descriptionBreakdown: ChartBucketRow[];
+};
+
+const DESCRIPTION_TOP_N = 8;
+const UNTITLED_KEY = 'untitled';
+const UNTITLED_LABEL = 'Untitled';
+const OTHER_KEY = 'other';
+const OTHER_LABEL = 'Other';
+
 type ClosedEntryAgg = {
   employeeId: string;
   employeeName: string;
   departmentId: string | null;
   departmentName: string | null;
+  description: string;
   start: string;
   durationSeconds: number;
 };
@@ -78,8 +91,16 @@ export class ReportsService {
     to: string,
     bucket: 'day' | 'week' = 'day',
     breakdown: 'employees' | 'departments' = 'employees',
-  ): ReportCharts {
-    const closed = this.closedEntriesForCharts(from, to);
+    employeeId?: string,
+  ): ReportCharts | EmployeeCharts {
+    const closed = this.closedEntriesForCharts(from, to, employeeId);
+
+    if (employeeId) {
+      return {
+        overTime: this.buildOverTime(closed, from, to, bucket),
+        descriptionBreakdown: this.buildDescriptionBreakdown(closed),
+      };
+    }
 
     return {
       overTime: this.buildOverTime(closed, from, to, bucket),
@@ -89,8 +110,7 @@ export class ReportsService {
 
   exportCsv(from: string, to: string): string {
     const entries = this.entriesInPeriod(from, to);
-    const header =
-      'employee,description,start,stop,durationSeconds,duration';
+    const header = 'employee,description,start,stop,durationSeconds,duration';
     const lines = entries.map((e) =>
       [
         csvEscape(e.employeeName ?? e.employeeId),
@@ -121,14 +141,26 @@ export class ReportsService {
     return rows.map(mapTimeEntry);
   }
 
-  private closedEntriesForCharts(from: string, to: string): ClosedEntryAgg[] {
+  private closedEntriesForCharts(
+    from: string,
+    to: string,
+    employeeId?: string,
+  ): ClosedEntryAgg[] {
     const { fromIso, toIso } = periodBounds(from, to);
+    const params: string[] = [fromIso, toIso];
+    let employeeClause = '';
+    if (employeeId) {
+      employeeClause = ' AND te.employee_id = ?';
+      params.push(employeeId);
+    }
+
     const rows = this.database.connection
       .prepare(
         `SELECT te.employee_id AS employee_id,
                 e.name AS employee_name,
                 e.department_id AS department_id,
                 d.name AS department_name,
+                te.description AS description,
                 te.start AS start,
                 te.duration_seconds AS duration_seconds
          FROM time_entries te
@@ -136,13 +168,14 @@ export class ReportsService {
          LEFT JOIN departments d ON d.id = e.department_id
          WHERE te.start >= ? AND te.start <= ?
            AND te.stop IS NOT NULL
-           AND te.duration_seconds IS NOT NULL`,
+           AND te.duration_seconds IS NOT NULL${employeeClause}`,
       )
-      .all(fromIso, toIso) as Array<{
+      .all(...params) as Array<{
       employee_id: string;
       employee_name: string;
       department_id: string | null;
       department_name: string | null;
+      description: string;
       start: string;
       duration_seconds: number;
     }>;
@@ -152,6 +185,7 @@ export class ReportsService {
       employeeName: r.employee_name,
       departmentId: r.department_id,
       departmentName: r.department_name,
+      description: r.description ?? '',
       start: r.start,
       durationSeconds: r.duration_seconds,
     }));
@@ -179,8 +213,7 @@ export class ReportsService {
       return [];
     }
 
-    const keys =
-      bucket === 'day' ? eachDay(from, to) : eachWeek(from, to);
+    const keys = bucket === 'day' ? eachDay(from, to) : eachWeek(from, to);
 
     return keys.map((key) => ({
       key,
@@ -223,6 +256,53 @@ export class ReportsService {
         totalDurationSeconds: v.total,
       }))
       .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds);
+  }
+
+  /** Top-N descriptions + Other; empty description → Untitled (AC-34). */
+  private buildDescriptionBreakdown(
+    entries: ClosedEntryAgg[],
+  ): ChartBucketRow[] {
+    if (entries.length === 0) {
+      return [];
+    }
+
+    const totals = new Map<string, { label: string; total: number }>();
+
+    for (const entry of entries) {
+      const trimmed = entry.description.trim();
+      const key = trimmed === '' ? UNTITLED_KEY : trimmed;
+      const label = trimmed === '' ? UNTITLED_LABEL : trimmed;
+      const current = totals.get(key) ?? { label, total: 0 };
+      current.total += entry.durationSeconds;
+      totals.set(key, current);
+    }
+
+    const sorted = [...totals.entries()]
+      .map(([key, v]) => ({
+        key,
+        label: v.label,
+        totalDurationSeconds: v.total,
+      }))
+      .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds);
+
+    if (sorted.length <= DESCRIPTION_TOP_N) {
+      return sorted;
+    }
+
+    const top = sorted.slice(0, DESCRIPTION_TOP_N);
+    const otherSeconds = sorted
+      .slice(DESCRIPTION_TOP_N)
+      .reduce((sum, row) => sum + row.totalDurationSeconds, 0);
+
+    if (otherSeconds > 0) {
+      top.push({
+        key: OTHER_KEY,
+        label: OTHER_LABEL,
+        totalDurationSeconds: otherSeconds,
+      });
+    }
+
+    return top;
   }
 }
 

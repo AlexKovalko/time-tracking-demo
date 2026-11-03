@@ -5,11 +5,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { periodBounds } from '../common/time-entry.mapper';
-import {
-  clampPage,
-  clampPageLimit,
-  Paginated,
-} from '../common/pagination';
+import { clampPage, clampPageLimit, Paginated } from '../common/pagination';
 import { DatabaseService } from '../database/database.service';
 import { DepartmentsService } from '../departments/departments.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
