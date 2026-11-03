@@ -1,16 +1,20 @@
 # Time-tracking calendar — product intent
 
-**Issue:** [#18](https://github.com/AlexKovalko/time-tracking-demo/issues/18)  
+**Issue (active parent):** [#64](https://github.com/AlexKovalko/time-tracking-demo/issues/64) — scope amend: **profile charts + UX polish backlog**  
+**Predecessor epic:** [#18](https://github.com/AlexKovalko/time-tracking-demo/issues/18) CLOSED (calendar / profile / report charts baseline)  
 **Slug (work item):** `time-tracking-calendar`  
 **Product slug:** `time-tracking-demo`  
 **Project:** Time Tracking Demo (`time-tracking-demo`) — **не Queply**  
 **Предшественники:**
 - baseline `time-tracking` — [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED; `docs/specs/time-tracking/{product,agent,ux}.md`
 - UI shell `time-tracking-ui` — [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6); `docs/specs/time-tracking-ui/{product,agent,ux}.md`
+- epic `#18` CLOSED — departments + employee profile + Report charts (AC-20…32)
 
 **UI port:** Compose / preview **:8081** (никогда :8080)  
 **Статус решений:** planning — defaults **locked** ниже (критический grill не нужен; portfolio scope)  
-**Scope amend (2026-11-03):** departments + employee profile + charts — **AC-20…30**; duration/interval display — **AC-31…32**; **AC-1…AC-19** без перенумерации.
+**Scope amend (2026-11-03):** departments + employee profile + charts — **AC-20…30**; duration/interval display — **AC-31…32**; **AC-1…AC-19** без перенумерации.  
+**Scope amend (#64, profile charts):** графики на **Employee profile** за тот же applied `from`/`to` — **AC-33…36**; **AC-1…AC-32** без перенумерации.
+**Scope amend (#64, UX polish backlog):** **AC-37…45** (i18n «Подразделение», calendar side-by-side overlap, Report visual amend AC-39/40, entries filters, delete modal keys, profile info block). Data contracts AC-27/28 + PC-1 **stable**; Report **visual** form updates per AC-39/40. **AC-1…36** без перенумерации.
 
 ## Intent
 
@@ -23,8 +27,9 @@
 5. **Данные:** удалить тестовый/мусорный контент; seed с **реалистичными ФИО** и достаточным объёмом time entries для статистики/отчёта **и графиков**.
 6. **Баг:** в селекте сотрудника таймера виден raw UUID вместо имени — селекты должны показывать **имя (ФИО)**.
 7. **Departments** — сущность отдела + назначение сотрудника; поля профиля (должность / email / phone).
-8. **Employee profile** — страница сотрудника: stats + time entries + фильтры периода/текста (паттерн AC-11).
-9. **Charts** — минимум демо: часы по дням/неделям + разбивка по сотрудникам / отделам (2 поверхности).
+8. **Employee profile** — страница сотрудника: stats + time entries + фильтры периода/текста (паттерн AC-11) + **charts за applied период** (AC-33…36) + labeled info block (AC-43).
+9. **Charts** — минимум демо: часы по дням/неделям + разбивка по сотрудникам / подразделениям (2 поверхности); Report visuals: compact over-time + pie/donut breakdown (AC-39/40).
+10. **UX polish (#64):** RU «Отдел»→«Подразделение» (AC-37); calendar overlapping entries side-by-side (AC-38); entries filter names + backend pagination (AC-41); delete modal Enter/Esc (AC-42).
 
 **Non-regression:** правила таймера, CRUD, report+CSV, theme/locale, SQLite, port :8081 из baseline + структура nav/routes/modals из `time-tracking-ui` сохраняются, кроме явно **superseded** решений ниже (календарная плотность и chrome таймера).
 
@@ -124,7 +129,7 @@
 
 | # | Подход | Вердикт |
 | --- | --- | --- |
-| EP-1 | **Отдельная страница/view** сотрудника: header (ФИО, title, dept, contacts) + **stats** (totals за период) + **список entries** с фильтрами **period + description** (employee зафиксирован; паттерн AC-11) | **Locked** |
+| EP-1 | **Отдельная страница/view** сотрудника: header (ФИО, title, dept, contacts) + **stats** (totals за период) + **список entries** с фильтрами **period + description** (employee зафиксирован; паттерн AC-11). **#64 extends** surface charts (**PC-1**), не заменяет EP-1 | **Locked** (+ charts via PC-1) |
 | EP-2 | Только расширенный modal без route | Отклонено — слабее demo depth |
 | EP-3 | Full HR dossier (docs, salary, history years) | OOS |
 
@@ -132,13 +137,28 @@
 
 | # | Подход | Вердикт |
 | --- | --- | --- |
-| CH-1 | **Ровно 2 поверхности** на Report (расширение существующего раздела): (1) **Hours over time** — bar по **дням** с toggle **недели**; (2) **Hours breakdown** — bar с toggle **Employees \| Departments**; общий period filter | **Locked** |
+| CH-1 | **Ровно 2 поверхности** на Report: (1) **Hours over time** — day\|week buckets (data = AC-27); (2) **Hours breakdown** — Employees \| Departments toggle (data = AC-28). **#64 visual amend:** over-time = **one compact chart** with X = day\|week (AC-39), **not** a tall list of per-day horizontal bars; breakdown = **pie/donut** (AC-40), not horizontal bars. RU label **Подразделения**. Profile charts remain separate **PC-1** | **Locked** (+ visual amend AC-39/40) |
 | CH-2 | 3+ отдельные страницы Analytics / heatmaps / utilization | OOS |
 | CH-3 | Только таблица без charts | Отклонено (запрос user) |
-| CH-4 | Pie + bar + line одновременно как Toggl Analytics | OOS — follow-up |
+| CH-4 | Pie **and** bar **and** line simultaneously as full Toggl Analytics (extra surfaces beyond the 2) | OOS — follow-up; **pie replacing** breakdown bars on Report is **IN** via AC-40 |
 
-**In-scope charts:** bar (или эквивалент readable chart) для CH-1; пустой период → empty state; seed даёт видимые ненулевые серии.  
-**OOS charts:** billable vs non-billable, projects/clients/tags, utilization/capacity, custom dashboards, saved views, scheduled email, nested 3-level grouping, heatmaps, live «who is running now» team wall.
+**In-scope charts:** CH-1 two surfaces with AC-39/40 visuals; PC-1 profile bars; пустой период → empty state; seed даёт видимые ненулевые серии.  
+**OOS charts:** billable vs non-billable, projects/clients/tags, utilization/capacity, custom dashboards, saved views, scheduled email, nested 3-level grouping, heatmaps, live «who is running now» team wall; third+ Report surface beyond AC-27/28.
+
+#### Profile charts (scope amend #64)
+
+**Рынок (кратко):** Clockify / Toggl не делают отдельный «employee profile charts» как first-class page — member insight = **Report filtered by user** + personal/team dashboard (hours over time; breakdown by project/activity). У нас нет projects → на профиле аналог personal view: **hours over time** + **breakdown по description** (ближайший activity-like сигнал). Report org-wide (**CH-1**) остаётся как есть.
+
+| # | Подход | Pros | Cons | Вердикт |
+| --- | --- | --- | --- | --- |
+| PC-1 | **2 поверхности на профиле:** (1) **Hours over time** day\|week (как AC-27, scope = этот employee); (2) **Description breakdown** — bar hours by description (top-N + корзина пустого description); период = **тот же applied from/to**, что stats/entries | «Графики» plural; reuse BarChart language; demo depth; meaningful без projects | Чуть больше FE/BE | **Locked (default)** |
+| PC-2 | Только **Hours over time** (1 chart) | Минимальный scope | Слабее запрос «графики»; нет «куда ушло время» | Отклонено для #64 |
+| PC-3 | Копировать Report breakdown Employees\|Departments на профиль | Переиспользование UI | Бессмысленно для одного employee | **Отклонено** |
+| PC-4 | Агрегация **только на клиенте** из уже загруженной (paginated) таблицы entries | Без нового API | Искажение из-за pagination / `q`; расхождение со stats | **Отклонено** |
+| PC-5 | **BE aggregates** с `employeeId` (+ period); FE рисует BarChart | Паритет с Report craft; корректные totals | Небольшой API/contract work | **Locked (data)** |
+
+**Связь с фильтрами профиля:** charts и stats используют **applied** `from`/`to` (после Apply, тот же контракт что AC-25/26). Текстовый **`q` / description filter влияет только на список entries**, не на charts (и обычно не на stats) — иначе поиск строки ломает картину периода.  
+**Report:** CH-1 stays **exactly 2** org-wide surfaces (AC-27…29 data contracts). **#64 visual amend** only: AC-39 (compact over-time chart) + AC-40 (pie/donut breakdown). Profile = PC-1 (AC-33…36).
 
 ### Рекомендация (default) — locked
 
@@ -148,9 +168,10 @@
 4. **Filters F-1:** employee + period + description text на Time entries; profile reuse period + description.
 5. **Seed S-1:** purge + realistic FIO + dense entries + **departments + profile fields**; все employee **selects** показывают **name**, не id/UUID.
 6. **Departments D-1:** entity + assign + minimal CRUD; не free-text.
-7. **Profile EP-1:** dedicated view + stats + filtered entries.
-8. **Charts CH-1:** 2 surfaces — hours over time (day\|week) + breakdown (employees\|departments).
-9. **BE in cast:** pagination/filter query params + seed reset + department/profile/chart aggregates — ожидаются; FE — calendar/timer/filters/profile/charts UI.
+7. **Profile EP-1 + PC-1:** dedicated view + stats + filtered entries + **2 profile chart surfaces** (over time + description breakdown) на applied period.
+8. **Charts CH-1:** 2 surfaces на **Report** — hours over time (day\|week) + breakdown (employees\|departments); **visuals** per AC-39/40 (compact chart + pie/donut).
+9. **BE in cast:** pagination/filter query params + seed reset + department/profile/chart aggregates (**включая employee-scoped** profile charts) — ожидаются; FE — calendar/timer/filters/profile/charts/i18n/polish UI.
+10. **UX polish AC-37…45** in #64 cast (i18n, overlap columns, report visuals, entries filter, delete keys, profile info block).
 
 ---
 
@@ -245,13 +266,32 @@
 3. **Stats** за выбранный период (хотя бы total hours / count entries).
 4. Список time entries этого сотрудника с фильтрами **period + description** (паттерн AC-11; employee зафиксирован).
 5. Пустой период / нет записей — empty state.
+6. **Charts** за тот же applied period (см. J9).
+
+### J9 — Profile charts (#64)
+
+1. На профиле задать / Apply период `from`/`to` (default как у профиля, ~last 28 days).
+2. Видны **две** chart-поверхности (reuse BarChart language где уместно):
+   - **Hours over time** — bar по дням; toggle → недели; только entries **этого** employee.
+   - **Description breakdown** — bar сравнения часов по description (top-N; пустой description → корзина вроде «Без описания» / Untitled).
+3. Сменить период → Apply → charts (и stats) обновляются под новый диапазон; текстовый `q` меняет только таблицу entries.
+4. Период без данных → **empty state** на charts, не crash.
+5. Report charts (J8) остаются independently usable — non-regression.
 
 ### J8 — Charts on Report
 
 1. Report → period picker (существующий или согласованный).
-2. **Hours over time:** bar по дням; toggle → агрегация по неделям; серии ненулевые на seed-периоде.
-3. **Breakdown:** toggle Employees | Departments → bar сравнения totals за тот же период.
+2. **Hours over time:** **один компактный** chart; X = дни; toggle → недели; серии ненулевые на seed-периоде (AC-39 visual).
+3. **Breakdown:** toggle Employees | Departments (RU **Подразделения**) → **pie/donut** totals за тот же период (AC-40).
 4. Empty period → empty state, не crash; tabular report + CSV non-regression рядом.
+
+### J10 — UX polish (#64)
+
+1. RU UI: везде «Подразделение(я)», не «Отдел(ы)» (включая unassigned).
+2. Calendar: два пересекающихся entry в одном дне → колонки рядом.
+3. Entries list: employee filter names; pagination/filters hit API.
+4. Delete entry: Enter confirms (icon on button); Esc closes.
+5. Profile: labeled Должность / Подразделение / Email / Телефон under name.
 
 ---
 
@@ -310,7 +350,7 @@
 ### Charts (scope amend)
 
 - **AC-27.** На Report (или согласованном analytics block того же раздела) есть chart **Hours over time**: bar (или эквивалент) часов по **дням** выбранного периода с переключением агрегации на **недели**; на seed-периоде серии **видимы и ненулевы**.
-- **AC-28.** Там же — chart **Hours breakdown** с toggle **Employees | Departments**: сравнение totals за тот же период; на seed — **≥2 сотрудников** и **≥2 отделов** с ненулевыми totals при подходящем period. Сотрудники без отдела попадают в корзину «Без отдела» / Unassigned, если такие есть.
+- **AC-28.** Там же — chart **Hours breakdown** с toggle **Employees | Departments**: сравнение totals за тот же период; на seed — **≥2 сотрудников** и **≥2 отделов** с ненулевыми totals при подходящем period. Сотрудники без подразделения попадают в корзину «Без подразделения» / Unassigned (RU label per AC-37; was «Без отдела»), если такие есть.
 - **AC-29.** Пустой / без данных период для charts → **empty state**, не crash; существующие табличный Report + CSV остаются (non-regression AC-16/18).
 - **AC-30.** Force reseed (AC-17) также пересоздаёт **departments**, profile fields и объём entries, **достаточный для AC-27/28** (усиливает AC-15/16 без смены их ID): dense distribution across days/weeks **и** across employees/departments.
 
@@ -335,6 +375,27 @@
   - Running entry без end: показывать start date/time + индикатор running / `…` — не выдумывать end; eng документирует точную строку в handoff.
   - QA asserts same-day layout (newline + comma) и locale suffixes for duration.
 
+### Employee profile charts (scope amend #64)
+
+- **AC-33.** На **Employee profile** есть chart **Hours over time** (bar / тот же visual language что Report): часы по **дням** applied периода с toggle агрегации на **недели**; scope = **только этот employee**; на seed при подходящем period серии **видимы и ненулевы**.
+- **AC-34.** Там же — chart **Description breakdown**: bar часов по **description** за тот же applied period (top-N описаний; пустое description → корзина «Без описания» / Untitled или i18n-эквивалент); на seed у демо-сотрудника **≥2** различимых description buckets с ненулевыми totals при подходящем period.
+- **AC-35.** Charts на профиле привязаны к **тому же applied `from`/`to`**, что stats и фильтр списка (AC-25/26). Текстовый description/`q` **не** фильтрует charts. Пустой / без данных период → **empty state**, не crash. **Report** data contracts (AC-27…29) **без регрессии**; visual form of Report charts may follow AC-39/40 without changing PC-1.
+- **AC-36.** Force reseed (AC-17 / AC-30) сохраняет объём, **достаточный и для AC-33/34** (dense days/weeks **и** несколько description labels у ≥1 employee, чтобы профиль показал ненулевые серии без ручного ввода).
+
+### UX polish backlog (scope amend #64)
+
+- **AC-37.** Во всех RU locale strings и hardcoded RU в `apps/web`: «**Отдел**» → «**Подразделение**» (и согласования: «Отделы»→«Подразделения», «Без отдела»→«Без подразделения» и т.п.) — tabs, forms, charts, unassigned buckets, nav. EN может остаться Department(s) / Unassigned.
+- **AC-38.** Calendar (Week и Day): пересекающиеся time entries в одной колонке дня отображаются **side-by-side columns** (делим ширину слота), **не** стопкой / непрозрачным наложением друг на друге.
+- **AC-39.** Report **Hours over time:** **один компактный chart**, ось X = day\|week buckets (toggle day\|week). **Не** высокий список горизонтальных bar’ов «по одному ряду на день». Data/behavior AC-27 сохраняется (visual amend).
+- **AC-40.** Report **Hours breakdown:** **pie/donut** вместо горизонтальных bars; toggle **Employees | Departments** сохраняется; RU label toggle/секции — **Подразделения** (см. AC-37). Data contract AC-28 сохраняется (visual amend). Pie on Report = **in scope** (supersedes prior OOS note that required pie).
+- **AC-41.** Entries list: фильтр сотрудника показывает **имена (ФИО), не UUID**; фильтры и пагинация идут через backend query params `page` / `limit` / `employeeId` / `q` / `from` / `to` — проверить и закрыть gaps (если UI client-only — исправить).
+- **AC-42.** Delete entry modal: **Enter** подтверждает удаление (иконка на confirm/primary кнопке); **Esc** закрывает модалку без удаления. Одинаково везде, где есть delete-entry dialog (минимум EntriesSection; ReportSection если там есть).
+- **AC-43.** Employee profile: под именем — **labeled info block** с подписями **Должность**, **Подразделение**, **Email**, **Телефон** (не только compact bullet meta). Пустые optional — скрыть поле или показать «—» по eng convention; **новых API-полей нет**.
+- **AC-44.** Week bucket labels (Report over-time week mode **и** Profile over-time week mode): **не** ISO `2026-W44`. Формат:
+  `DD.MM.YYYY - DD.MM.YYYY (N неделя)` (ru), пример `27.10.2026 - 02.11.2026 (44 неделя)`;
+  en: same date span with `(week N)`. Locale-aware via shared FE formatter (document path in eng handoff; prefer `apps/web/src/lib/format.ts` рядом с duration/interval).
+- **AC-45.** UI color (FE): charts используют **distinct palette** для bars / pie slices (не монохром black); calendar entries — **distinct colors** per employee or stable hash-of-id palette so side-by-side overlap columns (AC-38) читаемы. Light/dark themes работают; CSS variables; coherent with existing shadcn/tailwind tokens; avoid purple-on-white cliché; **не** раскрашивать весь UI — приоритет charts + calendar (+ subtle accents OK).
+
 ---
 
 ## Вне scope (явно) / follow-ups
@@ -348,7 +409,7 @@
 - Смена порта на :8080
 - Nested departments, dept managers, multi-department membership, org chart visualization
 - Utilization / capacity / billable charts, project breakdown, custom dashboards, saved views, scheduled report emails, heatmaps
-- Третий+ chart surface beyond AC-27/28; pie обязателен рядом с bar
+- Третий+ chart surface **на Report** beyond AC-27/28; pie **одновременно с** bar breakdown как лишняя поверхность (замена bars на pie = AC-40 **in scope**); utilization / billable на профиле; Employees|Departments breakdown **на профиле** (см. PC-3 отклонено)
 - Full HR profile (docs, salary, attendance years)
 
 **Рекомендуемые follow-up issues (PM/orchestrator создаёт при желании):**
@@ -358,7 +419,7 @@
 3. Filter by entry status (running/closed)  
 4. Report-level employee filter parity (если не сделают заодно)  
 5. Department filter on Time entries / Report  
-6. Extra chart types (pie, utilization) / custom dashboard  
+6. Extra chart types beyond AC-39/40 (e.g. utilization, dual pie+bar surfaces) / custom dashboard  
 7. Nested org / dept managers  
 
 ---
@@ -376,31 +437,40 @@
 | Selects | Always show **name**, never UUID as label |
 | Department | **Entity** + assign + minimal CRUD; **not** free-text |
 | Profile fields | title / email / phone **optional**; name required; departmentId optional (seed always set) |
-| Profile UX | Dedicated view: stats + entries + period/text filters |
-| Charts | **2 surfaces:** hours over time (day\|week) + breakdown (employees\|departments) |
+| Profile UX | Dedicated view: stats + entries + period/text filters + **PC-1 charts** |
+| Charts (Report) | **2 surfaces (CH-1):** AC-27/28 data; **visuals** AC-39 compact over-time + AC-40 pie/donut; RU **Подразделения** |
+| Charts (Profile) | **PC-1:** hours over time (day\|week) + description breakdown; same applied period; BE `employeeId` aggregates; `q` не режет charts (**AC-33…36**) |
+| Calendar overlap | **Side-by-side columns** for overlapping entries (AC-38) |
+| i18n RU dept | «Отдел» → «Подразделение» everywhere (AC-37) |
+| Profile info | Labeled block under name (AC-43); no new API fields |
+| Delete modal | Enter confirms; Esc closes (AC-42) |
+| Week bucket labels | `DD.MM.YYYY - DD.MM.YYYY (N неделя)` / en `(week N)` — not `YYYY-Www` (AC-44) |
+| UI color | Charts + calendar distinct colors; CSS vars; light/dark (AC-45) |
+| Entries filters | Names in select; backend `page`/`limit`/`employeeId`/`q`/`from`/`to` (AC-41) |
 | UI port | **:8081** |
 | Grill | Не блокирует — defaults locked |
-| AC numbering | **AC-1…19 intact**; amend = **AC-20…30**; display = **AC-31…32** |
+| AC numbering | **AC-1…36 intact**; #64 polish = **AC-37…45** (33–36 profile charts; 44 week labels; 45 UI color) |
 | Duration display | Shared util; ru `ч/м/с`, en `h/m/s`; skip zero higher parts |
 | Interval same-day | `DD.MM.YYYY,` + newline + `HH:mm - HH:mm` (en date `MM/DD/YYYY`) |
 | Interval cross-day | `date HH:mm – date HH:mm` with locale date order |
 
 ## Открытые вопросы
 
-Блокирующих нет. Мягкие (PM фиксирует в `agent.md` / ui-ux):
+Блокирующих нет для #64 (PC-1 + polish AC-37…45 locked; user OK: «можно делать параллельно»). Мягкие (уже в `agent.md`):
 
 1. Default calendar mode при первом заходе: **Week** (рекомендуется).  
 2. Page size default: **20** (eng OK 10–50).  
 3. Язык ФИО в seed: **ru-locale / русские ФИО** предпочтительно для ru UI demo (EN faker fullName допустим только если выглядят как люди, не UUID).  
 4. Drag на touch/mobile: desktop-first; mobile — click slot / button create допустим как fallback без отдельного AC.  
 5. Departments UI: отдельный nav item vs subsection under Employees — **ui-ux**.  
-6. Charts library / exact bar component — eng/ui-ux; продукт требует readable bars + toggles, не конкретный lib.
+6. Charts library — eng; Report over-time compact chart + pie/donut; profile keeps bar language unless eng reuses shared.
+7. Top-N для description breakdown на профиле: **default 8** (eng OK 5–10); остальное → «Прочее» / Other.
+8. Placement charts на профиле: **между stats и entries table**.
 
-## Handoff для PM
+## Handoff (PM done → eng)
 
-- **Slug / issue:** `time-tracking-calendar` / **#18**
-- **Спека:** `docs/specs/time-tracking-calendar/product.md` (**scope amend** — обновить `agent.md` + AC map + API contract)
-- **PM:** amend `agent.md` (departments, profile, charts, AC-20…30); ui-ux #19 ещё не стартовал — учесть в brief
-- **Ожидаемый cast (может быть amended PM):** `ui-ux → qa write → backend-dev ∥ frontend-dev → qa verify → devops`
-- **AC:** **AC-1…AC-32** (1–19 stable; 20–30 amend)
-- **Следующий:** **pm**
+- **Slug / issue:** `time-tracking-calendar` / **#64** (profile charts + UX polish; epic #18 CLOSED)
+- **Спека:** `product.md` + `agent.md` (AC-33…45, API employee-scoped charts, stage + AC issues)
+- **Cast:** `pm → qa write → backend-dev ∥ frontend-dev → qa verify`
+- **User OK:** received («можно делать параллельно») — eng may start after qa write
+- **AC in this ticket:** **AC-33…45** (1–32 historical/stable)
