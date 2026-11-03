@@ -26,19 +26,65 @@
 ui-ux → qa write → backend-dev ∥ frontend-dev → qa verify → devops
 ```
 
-| Role | In/Out | Stage |
+| Role | In/Out | Notes |
 | --- | --- | --- |
 | business-analyst | DONE | product.md |
-| pm | DONE (this amend) | agent.md |
-| **ui-ux** | **IN** | [#19](https://github.com/AlexKovalko/time-tracking-demo/issues/19) |
-| **qa** write | **IN** | [#20](https://github.com/AlexKovalko/time-tracking-demo/issues/20) |
-| **backend-dev** | **IN** ∥ FE | [#21](https://github.com/AlexKovalko/time-tracking-demo/issues/21) |
-| **frontend-dev** | **IN** ∥ BE | [#22](https://github.com/AlexKovalko/time-tracking-demo/issues/22) |
-| **qa** verify | **IN** | [#23](https://github.com/AlexKovalko/time-tracking-demo/issues/23) |
-| **devops** | **IN** | [#24](https://github.com/AlexKovalko/time-tracking-demo/issues/24) — closes **#18** after verify PASS |
+| pm | DONE | agent.md |
+| **ui-ux** | **IN** | handoff on #18; close related AC tickets when UX locked for them |
+| **qa** write | **IN** | handoff on #18; map tests → AC issues |
+| **backend-dev** | **IN** ∥ FE | handoff on #18 |
+| **frontend-dev** | **IN** ∥ BE | handoff on #18 |
+| **qa** verify | **IN** | AC matrix; close verified AC issues |
+| **devops** | **IN** | after verify; closes parent **#18** when cast done |
 | architect / security / marketer / tech-writer | **OUT** | — |
 
 **Parallel:** only backend-dev ∥ frontend-dev (non-overlapping trees; `packages/**` → backend-dev only, no parallel FE).
+
+
+## Ticket policy (user override)
+
+- **Parent epic only for roles:** [#18](https://github.com/AlexKovalko/time-tracking-demo/issues/18)
+- **Do NOT** create role/stage issues (`[time-tracking-calendar] · ui-ux|qa write|…`). Closed as not planned: #19–#24.
+- **Child issues = AC tickets only**, title `AC-N …`. Roles work via cast + handoff comments on **#18**.
+- In Task briefs / handoff-meta: `issue: #18`, `stage_issue: #<AC-ticket>` when working a specific AC (or comma-list when a role batch covers several).
+
+### AC → GitHub issue map
+
+| AC | Issue |
+| --- | --- |
+| AC-1 | [#32](https://github.com/AlexKovalko/time-tracking-demo/issues/32) |
+| AC-2 | [#33](https://github.com/AlexKovalko/time-tracking-demo/issues/33) |
+| AC-3 | [#34](https://github.com/AlexKovalko/time-tracking-demo/issues/34) |
+| AC-4 | [#35](https://github.com/AlexKovalko/time-tracking-demo/issues/35) |
+| AC-5 | [#36](https://github.com/AlexKovalko/time-tracking-demo/issues/36) |
+| AC-6 | [#37](https://github.com/AlexKovalko/time-tracking-demo/issues/37) |
+| AC-7 | [#38](https://github.com/AlexKovalko/time-tracking-demo/issues/38) |
+| AC-8 | [#39](https://github.com/AlexKovalko/time-tracking-demo/issues/39) |
+| AC-9 | [#40](https://github.com/AlexKovalko/time-tracking-demo/issues/40) |
+| AC-10 | [#41](https://github.com/AlexKovalko/time-tracking-demo/issues/41) |
+| AC-11 | [#42](https://github.com/AlexKovalko/time-tracking-demo/issues/42) |
+| AC-12 | [#43](https://github.com/AlexKovalko/time-tracking-demo/issues/43) |
+| AC-13 | [#44](https://github.com/AlexKovalko/time-tracking-demo/issues/44) |
+| AC-14 | [#45](https://github.com/AlexKovalko/time-tracking-demo/issues/45) |
+| AC-15 | [#46](https://github.com/AlexKovalko/time-tracking-demo/issues/46) |
+| AC-16 | [#47](https://github.com/AlexKovalko/time-tracking-demo/issues/47) |
+| AC-17 | [#48](https://github.com/AlexKovalko/time-tracking-demo/issues/48) |
+| AC-18 | [#49](https://github.com/AlexKovalko/time-tracking-demo/issues/49) |
+| AC-19 | [#50](https://github.com/AlexKovalko/time-tracking-demo/issues/50) |
+| AC-20 | [#51](https://github.com/AlexKovalko/time-tracking-demo/issues/51) |
+| AC-21 | [#52](https://github.com/AlexKovalko/time-tracking-demo/issues/52) |
+| AC-22 | [#53](https://github.com/AlexKovalko/time-tracking-demo/issues/53) |
+| AC-23 | [#54](https://github.com/AlexKovalko/time-tracking-demo/issues/54) |
+| AC-24 | [#55](https://github.com/AlexKovalko/time-tracking-demo/issues/55) |
+| AC-25 | [#56](https://github.com/AlexKovalko/time-tracking-demo/issues/56) |
+| AC-26 | [#57](https://github.com/AlexKovalko/time-tracking-demo/issues/57) |
+| AC-27 | [#58](https://github.com/AlexKovalko/time-tracking-demo/issues/58) |
+| AC-28 | [#59](https://github.com/AlexKovalko/time-tracking-demo/issues/59) |
+| AC-29 | [#60](https://github.com/AlexKovalko/time-tracking-demo/issues/60) |
+| AC-30 | [#61](https://github.com/AlexKovalko/time-tracking-demo/issues/61) |
+| AC-31 | [#62](https://github.com/AlexKovalko/time-tracking-demo/issues/62) |
+| AC-32 | [#63](https://github.com/AlexKovalko/time-tracking-demo/issues/63) |
+
 
 ## Ownership
 
@@ -138,13 +184,13 @@ HH:mm - HH:mm
 
 ## Next
 
-Orchestrator: **ui-ux (#19)** → qa write → BE∥FE → qa verify → devops → close #18 + retro.
+Orchestrator: **ui-ux** → qa write → BE∥FE → qa verify → devops → close #18 + retro. (AC tickets #32–#63; no role stages.)
 
 ## Handoff notes
 
-- **ui-ux:** `ux.md` covering FAB, GCal-lite, filters, depts/profile/charts, duration/interval display chrome, a11y, i18n key proposals.
-- **qa write:** red tests AC-1…32.
-- **backend-dev:** API + seed; packages if shared format util extracted.
-- **frontend-dev:** apps/web + locales; formatters; make tests green.
-- **qa verify:** AC matrix 1…32; leave #18 open for devops.
-- **devops:** reseed + :8081; close #24 and **#18**.
+- **ui-ux:** `ux.md`; handoff on #18; `stage_issue` = primary AC issues touched (e.g. #32–#41 chrome).
+- **qa write:** red tests AC-1…32; handoff on #18.
+- **backend-dev:** API + seed; handoff on #18.
+- **frontend-dev:** apps/web + locales; formatters; handoff on #18.
+- **qa verify:** AC matrix 1…32; close AC issues that pass; leave #18 for devops.
+- **devops:** reseed + :8081; close AC-17/19/30 as applicable; close parent **#18**.
