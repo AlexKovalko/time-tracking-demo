@@ -26,7 +26,7 @@ test.describe("AC-37 · RU Подразделение i18n (#71)", () => {
     await expect(deptTab).toContainText(/подразделен/i);
     await expect(deptTab).not.toContainText(/отдел/i);
     // Visible chrome around departments list
-    const main = page.locator("main, [role='main'], body");
+    const main = page.getByRole("main");
     const bodyText = await main.innerText();
     // Tab / heading / empty / chart labels must not keep old «Отдел» wording
     expect(bodyText).not.toMatch(/Отделы/);

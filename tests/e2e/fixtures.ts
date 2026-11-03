@@ -453,21 +453,12 @@ export async function openSeedEmployeeProfile(page: Page): Promise<void> {
   const list = byTestId(page, tid.employeesList);
   await expect(list).toBeVisible();
   for (let i = 0; i < 25; i += 1) {
-    const seedRow = list.locator(":scope > *").filter({
+    // Match Cyrillic in employee-name only — secondary "Без подразделения" is also Cyrillic.
+    const seedName = list.getByTestId("employee-name").filter({
       hasText: /[А-ЯЁа-яё]{3,}/,
     });
-    if ((await seedRow.count()) > 0) {
-      const row = seedRow.first();
-      const profileAction = row.getByRole("link", {
-        name: /^(профиль|profile)$/i,
-      });
-      if ((await profileAction.count()) > 0) {
-        await profileAction.click();
-      } else if ((await row.getByTestId("employee-name").count()) > 0) {
-        await row.getByTestId("employee-name").click();
-      } else {
-        await row.click();
-      }
+    if ((await seedName.count()) > 0) {
+      await seedName.first().click();
       await expect(byTestId(page, tid.employeeProfile)).toBeVisible({
         timeout: 15_000,
       });
@@ -485,7 +476,6 @@ export async function openSeedEmployeeProfile(page: Page): Promise<void> {
   });
 }
 
-/** Apply a ~28-day period on employee profile filters. */
 export async function applyProfilePeriod(
   page: Page,
   fromIso?: string,

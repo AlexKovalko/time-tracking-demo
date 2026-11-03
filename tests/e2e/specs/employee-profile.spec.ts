@@ -45,20 +45,11 @@ test.describe("AC-24…26 · employee profile (#55–#57)", () => {
     const list = byTestId(page, tid.employeesList);
     let opened = false;
     for (let i = 0; i < 25; i += 1) {
-      const seedRow = list.locator(":scope > *").filter({
+      const seedName = list.getByTestId("employee-name").filter({
         hasText: /[А-ЯЁа-яё]{3,}/,
       });
-      if ((await seedRow.count()) > 0) {
-        // Prefer the explicit Profile action — employee-name is also a link to /employees/:id
-        const row = seedRow.first();
-        const profileAction = row.getByRole("link", {
-          name: /^(профиль|profile)$/i,
-        });
-        if ((await profileAction.count()) > 0) {
-          await profileAction.click();
-        } else {
-          await row.getByTestId("employee-name").click();
-        }
+      if ((await seedName.count()) > 0) {
+        await seedName.first().click();
         opened = true;
         break;
       }
