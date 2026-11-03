@@ -1,6 +1,6 @@
 # CODEMAP — falconai
 
-Краткая карта репозитория после стадии `time-tracking` (issue [#1](https://github.com/AlexKovalko/falconai/issues/1)). Пакетный менеджер: **pnpm@11.9.0** only.
+Краткая карта репозитория после стадии `time-tracking` (issue [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)). Пакетный менеджер: **pnpm@11.9.0** only.
 
 ## Apps
 

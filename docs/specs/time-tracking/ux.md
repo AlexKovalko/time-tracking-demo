@@ -1,6 +1,6 @@
 # UX / UI contract — time-tracking
 
-**Issue:** [#1](https://github.com/AlexKovalko/falconai/issues/1)  
+**Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  
 **Project:** falconai  
 **Role:** ui-ux  

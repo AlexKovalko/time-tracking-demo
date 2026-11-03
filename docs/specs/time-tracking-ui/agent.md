@@ -1,11 +1,11 @@
 # Agent spec — time-tracking-ui
 
-**Issue:** [#6](https://github.com/AlexKovalko/falconai/issues/6)  
+**Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
 **Slug:** `time-tracking-ui`  
 **Project:** falconai (not Queply)  
-**Remote:** AlexKovalko/falconai  
+**Remote:** AlexKovalko/time-tracking-demo (was falconai; same issues #1–#16)  
 **Product:** `docs/specs/time-tracking-ui/product.md`  
-**Baseline (non-regression):** `docs/specs/time-tracking/{product,agent,ux}.md` — parent [#1](https://github.com/AlexKovalko/falconai/issues/1) CLOSED  
+**Baseline (non-regression):** `docs/specs/time-tracking/{product,agent,ux}.md` — parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED  
 **Stack:** `docs/STACK.md`  
 **UI port:** Compose / preview **:8081** (never :8080)  
 **Depth:** M  
@@ -30,8 +30,8 @@ Functional guarantees of v1 (`time-tracking` AC-1…AC-20) are **non-regression 
 
 ### Ordered cast (full history)
 
-1. **business-analyst** — done (`product.md`, AC-1…AC-16, FE-vs-BE locked) — stage [#7](https://github.com/AlexKovalko/falconai/issues/7) CLOSED
-2. **pm** — this doc + stage issues + issue handoff; **STOP for user «можно начинать?»** — stage [#8](https://github.com/AlexKovalko/falconai/issues/8)
+1. **business-analyst** — done (`product.md`, AC-1…AC-16, FE-vs-BE locked) — stage [#7](https://github.com/AlexKovalko/time-tracking-demo/issues/7) CLOSED
+2. **pm** — this doc + stage issues + issue handoff; **STOP for user «можно начинать?»** — stage [#8](https://github.com/AlexKovalko/time-tracking-demo/issues/8)
 3. *(after user OK only)* **ui-ux** — UX contract: nav IA, routes, sticky timer chrome/a11y (incl. mobile compact), calendar week layout, employee/entry dialogs; assimilate baseline hide-timer rules from `docs/specs/time-tracking/ux.md`
 4. **qa** `phase: write` — failing tests / Playwright stubs mapped to **AC-1…AC-16** + smoke non-regression for baseline timer/CRUD/report
 5. **frontend-dev** — implement in `apps/web` (+ `packages/**` if needed); make QA tests green without weakening them
@@ -63,12 +63,12 @@ Functional guarantees of v1 (`time-tracking` AC-1…AC-20) are **non-regression 
 
 | Stage | Issue | Status |
 | --- | --- | --- |
-| business-analyst | [#7](https://github.com/AlexKovalko/falconai/issues/7) | CLOSED |
-| pm | [#8](https://github.com/AlexKovalko/falconai/issues/8) | close after this handoff |
-| ui-ux | [#9](https://github.com/AlexKovalko/falconai/issues/9) | open until ui-ux handoff |
-| qa write | [#10](https://github.com/AlexKovalko/falconai/issues/10) | open until write handoff |
-| frontend-dev | [#11](https://github.com/AlexKovalko/falconai/issues/11) | open until FE handoff |
-| qa verify | [#12](https://github.com/AlexKovalko/falconai/issues/12) | open until verify; then close #6 |
+| business-analyst | [#7](https://github.com/AlexKovalko/time-tracking-demo/issues/7) | CLOSED |
+| pm | [#8](https://github.com/AlexKovalko/time-tracking-demo/issues/8) | close after this handoff |
+| ui-ux | [#9](https://github.com/AlexKovalko/time-tracking-demo/issues/9) | open until ui-ux handoff |
+| qa write | [#10](https://github.com/AlexKovalko/time-tracking-demo/issues/10) | open until write handoff |
+| frontend-dev | [#11](https://github.com/AlexKovalko/time-tracking-demo/issues/11) | open until FE handoff |
+| qa verify | [#12](https://github.com/AlexKovalko/time-tracking-demo/issues/12) | open until verify; then close #6 |
 
 ### Eng / packages / i18n owners
 
@@ -195,8 +195,8 @@ Mirror of `product.md` — **do not renumber**. Eng notes in italics do not chan
 
 | Topic | Issue | Notes |
 | --- | --- | --- |
-| Month calendar view (optional) | [#13](https://github.com/AlexKovalko/falconai/issues/13) | Product OOS default; `enhancement` (repo `tech-debt` label create 404 — noted in issue body) |
-| Calendar click-to-create entry | [#14](https://github.com/AlexKovalko/falconai/issues/14) | Nice-to-have; not AC |
+| Month calendar view (optional) | [#13](https://github.com/AlexKovalko/time-tracking-demo/issues/13) | Product OOS default; `enhancement` (repo `tech-debt` label create 404 — noted in issue body) |
+| Calendar click-to-create entry | [#14](https://github.com/AlexKovalko/time-tracking-demo/issues/14) | Nice-to-have; not AC |
 
 ## Next
 

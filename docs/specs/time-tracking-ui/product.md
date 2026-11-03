@@ -1,9 +1,9 @@
 # Time-tracking UI — product intent
 
-**Issue:** [#6](https://github.com/AlexKovalko/falconai/issues/6)  
+**Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
 **Slug:** `time-tracking-ui`  
 **Project:** falconai (не Queply)  
-**Предшественник:** slug `time-tracking` — parent [#1](https://github.com/AlexKovalko/falconai/issues/1) CLOSED; спеки `docs/specs/time-tracking/{product,agent,ux}.md`, стек `docs/STACK.md`  
+**Предшественник:** slug `time-tracking` — parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED; спеки `docs/specs/time-tracking/{product,agent,ux}.md`, стек `docs/STACK.md`  
 **UI port:** Compose / preview **:8081** (никогда :8080)  
 **Статус решений:** planning — defaults **locked** ниже (grill не блокирует; portfolio scope)
 

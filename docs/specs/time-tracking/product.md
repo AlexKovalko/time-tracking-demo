@@ -1,6 +1,6 @@
 # Учёт рабочего времени — product intent
 
-**Issue:** [#1](https://github.com/AlexKovalko/falconai/issues/1)  
+**Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  
 **Источник:** `docs/TZ.md`, стек зафиксирован в `docs/STACK.md`  
 **Статус решений:** grill отвечен — решения ниже **locked**

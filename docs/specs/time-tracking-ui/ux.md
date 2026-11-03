@@ -1,10 +1,10 @@
 # UX / UI contract — time-tracking-ui
 
-**Issue:** [#6](https://github.com/AlexKovalko/falconai/issues/6)  
+**Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
 **Slug:** `time-tracking-ui`  
 **Project:** falconai (not Queply)  
 **Role:** ui-ux  
-**Stage:** [#9](https://github.com/AlexKovalko/falconai/issues/9)  
+**Stage:** [#9](https://github.com/AlexKovalko/time-tracking-demo/issues/9)  
 **Status:** done — contract for frontend-dev / qa write  
 **Sources:** `product.md`, `agent.md`, baseline `docs/specs/time-tracking/ux.md`  
 **UI port:** **:8081** (never :8080)  
@@ -72,8 +72,8 @@ Reuse existing shadcn/ui + Tailwind (neutral surfaces, destructive for delete). 
 - Sidebar nav, hash-only IA, or keeping three stacked blocks as primary IA
 - Inline employee create strip (v1) — create is **Dialog only**
 - Hour-axis week, drag-resize, drag-create, timesheet grid
-- Month calendar as required view (follow-up [#13](https://github.com/AlexKovalko/falconai/issues/13))
-- Calendar **click-to-create** (follow-up [#14](https://github.com/AlexKovalko/falconai/issues/14))
+- Month calendar as required view (follow-up [#13](https://github.com/AlexKovalko/time-tracking-demo/issues/13))
+- Calendar **click-to-create** (follow-up [#14](https://github.com/AlexKovalko/time-tracking-demo/issues/14))
 - New API endpoints “for UI” without blocker on #6 (AC-16)
 - Auth, projects, tags, Pomodoro, AI chrome
 - Auto-stop on second Start; confirm dialog on every Hide after first confirmed Hide
@@ -99,7 +99,7 @@ Reuse existing shadcn/ui + Tailwind (neutral surfaces, destructive for delete). 
 | `falconai.locale` | `ru` \| `en` | unchanged |
 | `falconai.timer.hideConfirmDone` | `true` | unchanged |
 | `falconai.timer.preferCollapsed` | `true` \| omit | unchanged; drives collapsed / mobile chip after Hide |
-| `falconai.entries.view` | `list` \| `calendar` | **optional** polish — default **List** if absent (AC default). Persist = follow-up [#15](https://github.com/AlexKovalko/falconai/issues/15), not required for AC |
+| `falconai.entries.view` | `list` \| `calendar` | **optional** polish — default **List** if absent (AC default). Persist = follow-up [#15](https://github.com/AlexKovalko/time-tracking-demo/issues/15), not required for AC |
 
 ## 4. Employees route (AC-4, AC-5)
 
@@ -196,7 +196,7 @@ Identical to baseline `time-tracking/ux.md` §5–5.2:
 ### Empty / edge
 
 - No employees: disable Start; hint `timer.hints.needEmployee` (may link to `/employees`).
-- Multiple runnings (different employees): show state for **selected** employee; optional “other active” list — still nice-to-have / follow-up [#16](https://github.com/AlexKovalko/falconai/issues/16).
+- Multiple runnings (different employees): show state for **selected** employee; optional “other active” list — still nice-to-have / follow-up [#16](https://github.com/AlexKovalko/time-tracking-demo/issues/16).
 
 ## 6. Time entries — Calendar ∥ List (AC-9…AC-13)
 
@@ -386,8 +386,8 @@ Baseline timer/employees/report/entries.edit|delete|errors keys remain valid.
 
 1. **Mobile panel vs chip:** auto-collapse after Start may surprise power users — Restore is one tap; revisit if QA finds flake.
 2. **Calendar chip density:** many entries/day → scroll inside day column; truncate description with title tooltip.
-3. **Multi-employee parallel runnings:** still selected-employee-centric; global strip = [#16](https://github.com/AlexKovalko/falconai/issues/16).
-4. **View persistence:** default List always until [#15](https://github.com/AlexKovalko/falconai/issues/15).
+3. **Multi-employee parallel runnings:** still selected-employee-centric; global strip = [#16](https://github.com/AlexKovalko/time-tracking-demo/issues/16).
+4. **View persistence:** default List always until [#15](https://github.com/AlexKovalko/time-tracking-demo/issues/15).
 5. **Main `h1` vs chrome brand:** avoid dual `h1`; FE picks one pattern from §2.
 
 ## 15. Marketer tips
@@ -400,5 +400,5 @@ N/A — marketer out of cast. Copy proposed in §11 by ui-ux.
 - **Route choice:** `/employees`, `/entries`, `/report` (`/` → `/employees`)
 - **Sticky:** floating bottom-right panel; mobile running → compact chip
 - **Calendar:** week day cards only; chip → edit OK; create-on-day OOS #14; month OOS #13
-- **Next:** qa `phase: write` (stage [#10](https://github.com/AlexKovalko/falconai/issues/10)) — map tests to AC-1…AC-16 + testids; E2E base **:8081**
+- **Next:** qa `phase: write` (stage [#10](https://github.com/AlexKovalko/time-tracking-demo/issues/10)) — map tests to AC-1…AC-16 + testids; E2E base **:8081**
 - **Then:** frontend-dev (stage #11) → qa verify (#12)

@@ -1,6 +1,6 @@
 # Agent spec — time-tracking
 
-**Issue:** [#1](https://github.com/AlexKovalko/falconai/issues/1)  
+**Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  
 **Project:** falconai  
 **Product:** `docs/specs/time-tracking/product.md`  
@@ -266,4 +266,4 @@ Auth/RBAC/SSO; projects/clients/tags/billing; multi-tenant; mobile/offline; **me
 
 ## Next
 
-Cast finished (AC-1…AC-20). Docs aligned with delivered Compose (**8081** / **3000** / `falconai_sqlite_data`) and **pnpm only**. Parent [#1](https://github.com/AlexKovalko/falconai/issues/1) closed by **tech-writer**. Orchestrator: closeout retro.
+Cast finished (AC-1…AC-20). Docs aligned with delivered Compose (**8081** / **3000** / `falconai_sqlite_data`) and **pnpm only**. Parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) closed by **tech-writer**. Orchestrator: closeout retro.

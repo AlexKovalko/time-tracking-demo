@@ -103,7 +103,7 @@ CSV-колонки: `employee,description,start,stop,durationSeconds`.
 
 - **Cursor Agent (Composer)** — оркестрация ролей BA → PM → ui-ux → qa write → backend-dev ∥ frontend-dev → qa verify → devops → tech-writer
 - Custom subagents в `.cursor/agents/` + issue handoff через `gh issue comment`
-- GitHub Issues: parent [#1](https://github.com/AlexKovalko/falconai/issues/1), stage issues для cast
+- GitHub Issues: parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1), stage issues для cast
 - Модели: Cursor Agent / Composer (режимы Agent + Task subagents); без отдельного in-app LLM
 
 ### Примеры промптов
