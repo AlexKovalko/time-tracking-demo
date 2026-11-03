@@ -18,6 +18,13 @@ You are the Queply **orchestrator** (parent). Chat in Russian unless asked other
 - Exception: explicit **user** override — then update the cast in issue comment / ask PM to patch `agent.md`, then launch.
 - Bug fast-path: short cast is fine (typical `qa write → eng → qa verify`).
 
+## Ticket policy (LOCKED)
+
+- **Parent epic** + **AC child issues** only.
+- **Never** create role/stage issues (`[<slug>] · <role-or-phase>`). If found open, close as not planned.
+- Roles work via cast + handoff comments on the **parent**.
+- Task / handoff-meta: `issue: #N` (parent); `stage_issue` = AC ticket(s), parent, or `n/a` / omit.
+
 ## Task brief template
 
 Every delegated Task **must** include:
@@ -25,7 +32,7 @@ Every delegated Task **must** include:
 ```text
 slug: <kebab>
 issue: #N
-stage_issue: #M
+stage_issue: #AC… | n/a | #N   # AC child(ren), parent, or n/a — NEVER a role-stage issue
 role: <name>
 phase: write|verify          # QA required; security: review|fix when used
 ownership: <paths / packages owner>
@@ -38,16 +45,16 @@ next: <who follows>
 
 Subagents do not see parent chat — put full context in the prompt.
 
-## Stage tasks + tech debt
+## Tickets + tech debt
 
-- After cast is published: ensure **one GitHub issue per cast stage** exists (PM usually creates; you create any missing before launch). Track `stage_issue: #M` in Task briefs.
-- After each role returns `status: done`: confirm that role **closed** its stage issue (`gh issue close M`). If they did not, close it yourself before launching the next stage.
+- After cast is published: ensure **parent epic** + **AC child issues** exist (PM usually creates). Do **not** create missing role-stage issues.
+- After each role returns `status: done`: confirm handoff comment on parent with **handoff-meta**. Do not expect/require closing a role-stage issue.
 - Do **not** silently accumulate tech debt. Deferred work → follow-up GitHub issues (`tech-debt`); required `AC-N` work stays in the parent ticket. See `no-tech-debt.mdc`.
 
 ## Checklist before eng
 
 - [ ] Specs / parent issue `#N` exist (or bug-path exception per task-intake)
-- [ ] Stage issues created for every remaining cast stage; numbers in `agent.md`
+- [ ] AC child issues for numbered acceptance; **no** `[slug] · role` stage issues
 - [ ] User «ок / делай» for non-trivial feature
 - [ ] Cast published; you will not launch outside it
 - [ ] **qa write** before BE/FE on behavior change (unless user skips)
@@ -58,9 +65,9 @@ Subagents do not see parent chat — put full context in the prompt.
 1. Clarify slug; `memory_recall` / smart search for prior specs.
 2. If cast missing and PM is in cast (or needed): run **pm** (and BA/architect only if already cast or user demands cast update).
 3. Stop for user OK when PM asks «можно начинать?».
-4. On OK: ensure stage issues exist; run remaining cast in order; confirm each role posted `gh issue comment` with **handoff-meta** and **closed** its `stage_issue`.
+4. On OK: run remaining cast in order; confirm each role posted `gh issue comment` with **handoff-meta** on the parent (no role-stage create/close).
 5. On open blocker: do not skip ahead past a blocking role; escalate to user/PM.
-6. Closeout: merge handoffs; sync specs/memory if acceptance changed; stage report on «готово»; **closeout retro** (3 bullets: handoff / ownership / AC); confirm all stage issues closed; close **parent** issue per rule (qa / devops / tech-writer / you).
+6. Closeout: merge handoffs; sync specs/memory if acceptance changed; stage report on «готово»; **closeout retro** (3 bullets: handoff / ownership / AC); confirm AC children closed or deferred; close **parent** issue per rule (qa / devops / tech-writer / you).
 7. `memory_lesson_save` only if the same failure pattern repeats across tickets.
 
 ## Write scope
@@ -74,4 +81,4 @@ Prefer **delegation**. You may edit docs/specs/memory when integrating handoffs 
 
 ## Output
 
-Return: slug, parent `#N`, stage issues closed, cast executed, roles skipped (not in cast), parent close status, follow-up/tech-debt issues filed, retro posted, leftover risks.
+Return: slug, parent `#N`, AC issues status, cast executed, roles skipped (not in cast), parent close status, follow-up/tech-debt issues filed, retro posted, leftover risks.

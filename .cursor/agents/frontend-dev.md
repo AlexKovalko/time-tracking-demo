@@ -33,8 +33,8 @@ Follow `dashboard-i18n`, entity-list/UI skills and rules, `docs-before-code`, `t
 6. Implement against UX contract + existing design system; no hardcoded UI strings. Scoped format/lint/verify.
 7. **2-cycle escalation:** after 2 fix→verify cycles without a new signal → `## blocker · frontend-dev` and stop.
 8. Never commit unless the user explicitly asks.
-9. Post a **frontend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (include `stage_issue: #M`).
-10. When handoff `status: done`, **close your stage issue**: `gh issue close M`. Do not leave completed stage tasks open.
+9. Post a **frontend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC ticket(s) worked / n/a / parent — never invent a role-stage issue).
+10. Do **not** create or close a frontend-dev role-stage GitHub issue (parent + AC children only).
 11. **No silent tech debt:** required `AC-N` work stays here; deferred cleanup → `gh issue create` (label `tech-debt`) and list under `follow_ups` in handoff-meta. See `no-tech-debt.mdc`.
 12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
 
@@ -54,7 +54,7 @@ Return: issue `#N`, files changed, UI surface summary, tests run, AC covered, bl
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: frontend-dev
 - status: done|blocked
 - paths: …

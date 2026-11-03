@@ -23,11 +23,11 @@ Orchestrator (parent / `/orchestrator`): follow `.cursor/rules/dev-team-orchestr
 
 1. Clarify slug/topic; `memory_smart_search` / recall prior specs.
 2. If cast not yet published: run roles already needed to produce cast (usually BA then PM; architect only if already cast or user insists on staffing).
-3. **PM** publishes ordered **role cast** in `agent.md` + issue handoff; **stop** for «можно начинать?».
+3. **PM** publishes ordered **role cast** in `agent.md` + issue handoff; creates **parent epic** + **AC child issues**; **stop** for «можно начинать?».
 4. On user OK: execute **remaining cast only**, in order (`∥` when marked). Typical eng minimum: `qa write` → BE/FE → `qa verify`; optional cast slots: ui-ux ∥ marketer, security, devops, tech-writer.
-5. Every Task includes `issue: #N`, `stage_issue: #M`, ownership, `AC-*`, depth S/M/L, and **handoff-meta** on every issue comment. Create stage issues for each cast stage; **close** each stage issue when that role finishes.
+5. Every Task includes `issue: #N` (parent), ownership, `AC-*`, depth S/M/L, and **handoff-meta** on every parent-issue comment. Optional `stage_issue:` = AC ticket(s) being worked, parent, or omit/`n/a`. **Do not** create `[<slug>] · <role>` stage issues.
 6. No silent tech debt — deferred work → follow-up GitHub issues (`tech-debt`).
-7. Closeout: all stage issues closed; close parent issue per cast; orchestrator **closeout retro** (3 bullets).
+7. Closeout: AC children closed or deferred as follow-ups; close parent issue per cast; orchestrator **closeout retro** (3 bullets).
 
 ### Bug fast-path
 
@@ -51,8 +51,8 @@ Add `security` / `tech-writer` **only** if PM/orchestrator put them in cast. Sti
 
 ```text
 slug: …
-issue: #N
-stage_issue: #M
+issue: #N                    # parent epic (required)
+stage_issue: #AC… | n/a | #N # AC child(ren) worked, parent, or n/a — NEVER a role-stage issue
 role: …
 phase: write|verify          # QA; security may use review|fix
 ownership: …
@@ -65,7 +65,7 @@ next: …
 
 ## Handoff-meta
 
-Every role issue comment ends with `### handoff-meta` (slug, issue, role, status, paths, commands, ac_covered, next). See orchestration rule.
+Every role issue comment ends with `### handoff-meta` (slug, issue, role, status, paths, commands, ac_covered, next; `stage_issue` = AC / parent / n/a). See orchestration rule.
 
 ## Anti-patterns
 
@@ -78,14 +78,17 @@ RIGHT: Parent plans and integrates; specialists own their trees.
 WRONG: Marketer edits locale JSON; FE/BE both edit `packages/**` in parallel.  
 RIGHT: Shared ownership table in the orchestration rule.
 
+WRONG: Create `[<slug>] · qa write|backend-dev|…` GitHub issues for cast stages.  
+RIGHT: Parent epic + AC child issues only; roles hand off via comments on the parent.
+
 ## Checklist
 
 - [ ] Role cast published (ordered who in / who out); no launches outside cast
 - [ ] Specs path under `docs/specs/<slug>/` when non-trivial
 - [ ] Parent GitHub issue `#N` exists and is passed to every role
-- [ ] Stage issues created for each cast stage; closed on role done
+- [ ] AC child issues exist for numbered acceptance; **no** role/stage issues created
 - [ ] Acceptance numbered `AC-N`; QA maps tests; verify has AC matrix
-- [ ] Each role posted handoff with **handoff-meta** (`stage_issue`, `follow_ups`)
+- [ ] Each role posted handoff with **handoff-meta** (`stage_issue` = AC/parent/n/a, `follow_ups`)
 - [ ] Blockers and clarifications also commented on the issue (not chat-only)
 - [ ] No silent tech debt — deferred work filed as follow-up issues
 - [ ] User OK before production code (feature path)

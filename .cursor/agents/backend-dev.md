@@ -31,8 +31,8 @@ Do not add webhook signature skip flags. Follow `api-structure`, `env-docs`, `do
 6. Keep API contracts stable for parallel frontend work; document breaking changes in agent.md via orchestrator/PM if needed. Format/lint scoped.
 7. **2-cycle escalation:** after 2 fix→verify cycles without a new signal → `## blocker · backend-dev` and stop.
 8. Never commit unless the user explicitly asks.
-9. Post a **backend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (include `stage_issue: #M`).
-10. When handoff `status: done`, **close your stage issue**: `gh issue close M`. Do not leave completed stage tasks open.
+9. Post a **backend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC ticket(s) worked / n/a / parent — never invent a role-stage issue).
+10. Do **not** create or close a backend-dev role-stage GitHub issue (parent + AC children only).
 11. **No silent tech debt:** required `AC-N` work stays here; deferred cleanup → `gh issue create` (label `tech-debt`) and list under `follow_ups` in handoff-meta. See `no-tech-debt.mdc`.
 12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
 
@@ -52,7 +52,7 @@ Return: issue `#N`, files changed, API/contract summary, tests run, AC covered, 
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: backend-dev
 - status: done|blocked
 - paths: …

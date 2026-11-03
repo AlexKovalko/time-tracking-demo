@@ -29,8 +29,8 @@ The Task prompt **must** include `phase: write` or `phase: verify`. If missing, 
 2. Map each acceptance item (`AC-N`) to concrete failing tests (red). Prefer API/unit for backend contracts, dashboard tests for UI behavior. Record the mapping in the handoff.
 3. Do **not** implement production code to make tests pass.
 4. Confirm tests fail for the right reason; record how to run them.
-5. Handoff comment: `## qa write — <slug>` with test paths, commands, **AC → test** coverage, gaps + **handoff-meta** (`stage_issue`).
-6. When write handoff is `status: done`, **close the qa-write stage issue** (`gh issue close M`).
+5. Handoff comment on **parent** `#N`: `## qa write — <slug>` with test paths, commands, **AC → test** coverage, gaps + **handoff-meta** (`stage_issue` = AC tickets / n/a / parent — never invent a role-stage issue).
+6. Do **not** create or close a qa-write role-stage GitHub issue (policy: parent + AC children only).
 7. Blockers / clarifications (ambiguous acceptance): separate issue comments immediately.
 8. Deferred test gaps outside current AC → follow-up `tech-debt` issues, not silent skips.
 
@@ -43,10 +43,10 @@ The Task prompt **must** include `phase: write` or `phase: verify`. If missing, 
 5. Do not delete or weaken failing tests to pass — open blocker for eng instead.
 6. **Security:** wait on / honor open `## blocker · security` **only if security is in the role cast**. If security was not cast, do not block close waiting for security.
 7. **2-cycle escalation:** after 2 fix→verify cycles without a new signal, post `## blocker · qa` (or eng) and stop — do not spin CI.
-8. Handoff comment: `## qa verify — <slug>` with pass/fail, AC matrix, gaps, evidence + **handoff-meta** (`stage_issue`).
-9. When verify handoff is `status: done`, **close the qa-verify stage issue** (`gh issue close M`).
+8. Handoff comment on **parent** `#N`: `## qa verify — <slug>` with pass/fail, AC matrix, gaps, evidence + **handoff-meta** (`stage_issue` = AC tickets / n/a / parent).
+9. Close **AC child issues** that PASS. Do **not** create/close a qa-verify role-stage issue.
 10. Failed acceptance / unclear criteria: **blocker** / **уточнение** on the parent issue immediately.
-11. **Close the parent issue when later cast roles are not needed:** if acceptance is met (verify PASS), all stage issues for finished cast roles are closed, devops/tech-writer are **not** in the cast (or already done) and no open security blocker from a cast security role, post a short closing note and run `gh issue close N`. If devops/tech-writer/security (cast) still queued or blocking, leave parent open and hand off.
+11. **Close the parent issue when later cast roles are not needed:** if acceptance is met (verify PASS), AC children closed or deferred as follow-ups, devops/tech-writer are **not** in the cast (or already done) and no open security blocker from a cast security role, post a short closing note and run `gh issue close N`. If devops/tech-writer/security (cast) still queued or blocking, leave parent open and hand off.
 
 ## agentmemory
 
@@ -64,7 +64,7 @@ Return: issue `#N`, phase, test paths/commands, AC mapping or matrix, pass/fail 
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: qa
 - status: done|blocked
 - paths: …

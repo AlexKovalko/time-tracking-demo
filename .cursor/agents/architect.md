@@ -30,7 +30,7 @@ You may create or edit only:
 4. Write `docs/specs/<slug>/architecture.md`; point to or draft `docs/decisions/…` when non-trivial.
 5. Hand off **Constraints / API boundaries** for PM to fold into `agent.md`.
 6. Do **not** replace BA product grill or ui-ux detail; do not implement eng work.
-7. Post handoff `## architect — <slug>` on parent issue `#N` with **handoff-meta** (`stage_issue`). When done, **close your stage issue**. Deferred architectural follow-ups → separate GitHub issues, not silent TODOs in `architecture.md` alone.
+7. Post handoff `## architect — <slug>` on parent issue `#N` with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close an architect role-stage ticket. Deferred architectural follow-ups → separate GitHub issues, not silent TODOs in `architecture.md` alone.
 8. Blockers/clarifications as separate comments immediately.
 
 ## Does not
@@ -55,7 +55,7 @@ Return: issue `#N`, architecture.md path, chosen approach + why, constraints for
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: architect
 - status: done|blocked
 - paths: …

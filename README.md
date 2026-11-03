@@ -111,7 +111,7 @@ CSV-колонки: `employee,description,start,stop,durationSeconds`.
 
 - **Cursor Agent (Composer)** — оркестрация ролей BA → PM → ui-ux → qa write → backend-dev ∥ frontend-dev → qa verify → devops → tech-writer
 - Custom subagents в `.cursor/agents/` + issue handoff через `gh issue comment`
-- GitHub Issues: parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1), stage issues для cast
+- GitHub Issues: parent epic + AC child issues only (no `[slug] · role` stage tickets); handoffs via comments on parent
 - Модели: Cursor Agent / Composer (режимы Agent + Task subagents); без отдельного in-app LLM
 
 ### Примеры промптов
@@ -120,7 +120,7 @@ CSV-колонки: `employee,description,start,stop,durationSeconds`.
 2. «qa write, phase: write, issue #1: failing Playwright + API + structure тесты по AC-1…AC-20; не пиши production apps.»
 3. «backend-dev: NestJS `/api` из agent.md, SQLite volume, сделай `pnpm run test:api` зелёным; только pnpm; не ослабляй QA.»
 4. «frontend-dev: `apps/web` по ux.md, nginx на Compose **8081**, E2E с `WEB_BASE_URL` если 8080 занят чужим стеком.»
-5. «tech-writer: синхронизируй README/CODEMAP/runbook с фактическими портами 8081/8082; закрой stage #4 и parent #1.»
+5. «tech-writer: синхронизируй README/CODEMAP/runbook с фактическими портами 8081/8082; закрой parent #1 после handoff.»
 
 ### Что ИИ сделал хорошо
 

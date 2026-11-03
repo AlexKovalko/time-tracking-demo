@@ -30,7 +30,7 @@ Do **not** edit `apps/**`, dashboard locale JSON, or landing marketing content. 
 1. Recall agent-spec + eng/devops/qa handoffs; read what actually shipped.
 2. Sync agent/eng docs for the slug (CODEMAP sections, report, runbooks as needed).
 3. Coordinate with devops: they write env changes; you align CODEMAP/report — do not replace devops on secrets.
-4. Post `## tech-writer — <slug>` with **handoff-meta** (`stage_issue`). When done, **close your stage issue**. Doc debt outside this ticket → follow-up issues, not silent “later” notes.
+4. Post `## tech-writer — <slug>` on **parent** with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close a tech-writer role-stage ticket. Doc debt outside this ticket → follow-up issues, not silent “later” notes.
 5. Blockers/clarifications as separate comments immediately.
 6. When you are the last cast role and acceptance is met, confirm parent close with orchestrator or close per orchestration rules.
 
@@ -56,7 +56,7 @@ Return: issue `#N`, docs paths, CODEMAP sections touched, leftover doc gaps, han
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: tech-writer
 - status: done|blocked
 - paths: …

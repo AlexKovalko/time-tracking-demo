@@ -33,7 +33,7 @@ You may create or edit only:
    - **UI for sellability** — framing, order, CTA emphasis (docs; not React)
 3. Also cover Landing / Cabinet / Sellability framing as relevant to the slug.
 4. Prefer concrete before/after copy over vague advice.
-5. Post a **marketer** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue`). When done, **close your stage issue**. Deferred copy/campaign ideas → follow-up issues, not silent debt.
+5. Post a **marketer** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close a marketer role-stage ticket. Deferred copy/campaign ideas → follow-up issues, not silent debt.
 6. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
 
 ## agentmemory
@@ -52,7 +52,7 @@ Return: issue `#N`, paths, key copy proposals, UI-for-sellability tips, FE/landi
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: marketer
 - status: done|blocked
 - paths: …

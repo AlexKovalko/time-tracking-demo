@@ -40,16 +40,16 @@ Ordered **template** — roles absent from cast are simply skipped:
 
 1. **BA** → grill as needed → `product.md` / journeys
 2. **architect** (if in cast) → `architecture.md` + constraints for PM
-3. **PM** → `agent.md` + **role cast** + per-stage GitHub issues → **stop for user OK**
+3. **PM** → `agent.md` + **role cast** + parent epic + **AC child issues** → **stop for user OK**
 4. Optional parallel after product intent (if in cast): **ui-ux** ∥ **marketer**
 5. After «ок / делай»: **qa** with `phase: write` — failing tests from acceptance (`docs-before-code` / red)
 6. **backend-dev** ∥ **frontend-dev** (non-overlapping trees; API contract in `agent.md`) — make QA tests green; do not weaken or delete them
 7. **security** (if in cast) — after eng; before or with verify; blockers hold close
-8. **qa** with `phase: verify` — re-run tests, AC matrix, report gaps
+8. **qa** with `phase: verify` — re-run tests, AC matrix, report gaps; close passed AC issues
 9. **devops** (if in cast) — infra/env
 10. **tech-writer** (if in cast) — docs sync near closeout
-11. Each finished cast role **closes its stage issue**. **Close the parent GitHub issue** when the feature stage is done: after **qa verify** succeeds, if devops/tech-writer were **not** in cast (or already done), **qa** (or orchestrator) **closes** parent with `gh issue close N`. If devops or tech-writer ran, close parent after their handoff (that role or orchestrator).
-12. Orchestrator merges results, updates specs/memory if scope changed, writes stage report when handing off «готово», posts **closeout retro**; confirms no open stage issues left for the cast
+11. Roles coordinate via **handoff comments on the parent issue** (no role-stage tickets). **Close the parent GitHub issue** when the feature stage is done: after **qa verify** succeeds, if devops/tech-writer were **not** in cast (or already done), **qa** (or orchestrator) **closes** parent with `gh issue close N`. If devops or tech-writer ran, close parent after their handoff (that role or orchestrator).
+12. Orchestrator merges results, updates specs/memory if scope changed, writes stage report when handing off «готово», posts **closeout retro**; confirms AC children closed or tracked and no open role-stage leftovers
 
 Task prompts for QA **must** include `phase: write` or `phase: verify`.
 
@@ -79,7 +79,7 @@ If two implementers must touch the same files, run **sequentially** or serialize
 - BA numbers product acceptance in `product.md` as `AC-1`, `AC-2`, …
 - PM mirrors/refines done-criteria in `agent.md` with the same `AC-N` IDs (add eng-only ACs if needed; do not renumber silently)
 - **qa write:** every new/changed test maps to one or more `AC-N`
-- **qa verify:** handoff includes matrix `AC-N → pass | fail | gap`
+- **qa verify:** handoff includes matrix `AC-N → pass | fail | gap`; close AC child issues that pass
 - Eng/security must-fix should cite `AC-N` when fixing acceptance gaps
 
 ## Handoff-meta
@@ -90,7 +90,7 @@ Every role `gh issue comment` handoff **must** end with:
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: …
 - status: done|blocked
 - paths: …
@@ -100,7 +100,9 @@ Every role `gh issue comment` handoff **must** end with:
 - next: …
 ```
 
-Omit `commands` / `ac_covered` only when truly N/A (e.g. pure planning with no tests yet); still keep the other fields. Include `stage_issue` whenever a stage task was created.
+- `issue:` is always the **parent epic**.
+- `stage_issue:` may list the **AC child issue(s)** currently worked, the parent `#N`, or `n/a` / omit when N/A. **Never** invent a separate role/phase GitHub issue for this field.
+- Omit `commands` / `ac_covered` only when truly N/A (e.g. pure planning with no tests yet); still keep the other fields.
 
 ## Stuck escalation (2-cycle)
 
@@ -110,27 +112,21 @@ After **2** eng↔qa fix→verify cycles **without a new signal** (new failing t
 
 On stage close / «готово», orchestrator posts a short issue comment with **3 bullets**: what broke in (1) handoff, (2) ownership, (3) AC tracing — or «нет» per item. Use `memory_lesson_save` / rule tweak **only** if the pattern repeats across tickets.
 
-## GitHub ticket (required)
+## GitHub ticket (required) — LOCKED policy
 
-Non-trivial team work is tied to a **parent GitHub issue** (number in specs and every Task prompt) plus **per-stage child issues**.
+Non-trivial team work uses **parent epic + AC child issues only**. Roles do **not** get their own GitHub issues.
 
-1. **PM** (or orchestrator if PM skipped): ensure the **parent** issue exists — create with `gh issue create --assignee @me` if missing; put `#N` / URL into `product.md` / `agent.md`.
-2. **Stage tasks (required):** after the role cast is published, PM/orchestrator creates **one GitHub issue per cast stage** (qa write and qa verify are separate stages). Title: `[<slug>] · <role-or-phase>`. Body links parent `#N`, lists relevant `AC-N`, and states the owner role. Put stage issue numbers into `agent.md` and every Task prompt as `stage_issue: #M`.
-3. Every delegated Task prompt **must** include `issue: #N` (parent) and `stage_issue: #M` when a stage issue exists.
-4. **Every role that runs** ends by posting a handoff comment on the **parent** issue via `gh issue comment N`. No silent handoff. Include **handoff-meta** (include `stage_issue: #M`).
-5. **Close the stage issue yourself** when that stage’s handoff is `status: done`: `gh issue close M` (the role that finished, or orchestrator if the role could not). Do **not** leave completed stage issues open. Cancel (`gh issue close M --reason "not planned"` or comment + close) only if the stage was removed from cast.
-6. **Blockers and clarifications** also go on the **parent** ticket — not only in chat or memory. Post them as soon as they appear (do not wait for role end).
-7. Orchestrator may add a final summary + **closeout retro** when closing the stage / «готово».
-8. **Who closes the parent issue:** after acceptance is met — **qa** (verify phase) when devops/tech-writer are skipped; otherwise after those cast roles’ handoffs (**devops** / **tech-writer** / **orchestrator**). Close only when all stage issues for the cast are closed (or cancelled). Never leave a done parent ticket open solely because a skipped role was not scheduled.
+1. **Parent epic (required):** **PM** (or orchestrator if PM skipped) ensures a **parent** issue exists — `gh issue create --assignee @me` if missing; put `#N` / URL into `product.md` / `agent.md`.
+2. **AC child issues (required for numbered acceptance):** after AC list is known, PM/orchestrator creates **one GitHub issue per `AC-N`** (title preferably starts with `AC-N …`). Body links parent `#N`. Put the map `AC-N → #M` into `agent.md`. **qa verify** (or eng when agreed) closes AC issues that pass.
+3. **Do NOT create role/stage issues.** Forbidden titles / pattern: `[<slug>] · <role-or-phase>` (e.g. `qa write`, `backend-dev`, `frontend-dev`, `qa verify`, `ui-ux`, `pm`, …). Do **not** `gh issue create` for cast stages. Roles run via **cast + handoff comments on the parent**.
+4. Every delegated Task prompt **must** include `issue: #N` (parent). Optionally include `stage_issue:` as AC ticket(s) being worked, parent `#N`, or omit / `n/a`.
+5. **Every role that runs** ends by posting a handoff comment on the **parent** issue via `gh issue comment N`. No silent handoff. Include **handoff-meta** (`stage_issue` = AC / parent / n/a — never a role-stage issue).
+6. Roles do **not** close a “stage issue” for their role — there is none. Close **AC** children when that acceptance passes (typically qa verify).
+7. **Blockers and clarifications** also go on the **parent** ticket — not only in chat or memory. Post them as soon as they appear (do not wait for role end).
+8. Orchestrator may add a final summary + **closeout retro** when closing the stage / «готово».
+9. **Who closes the parent issue:** after acceptance is met — **qa** (verify phase) when devops/tech-writer are skipped; otherwise after those cast roles’ handoffs (**devops** / **tech-writer** / **orchestrator**). Prefer AC children closed (or explicitly deferred as follow-ups) before closing parent. Never leave a done parent ticket open solely because a skipped role was not scheduled.
 
-## Tech debt → follow-up issues (no silent debt)
-
-See also `no-tech-debt.mdc`.
-
-- Do **not** accumulate unpaid tech debt in code (`TODO`/`FIXME`/skipped tests/temporary hacks) without a filed issue.
-- Deferred / out-of-scope cleanup discovered mid-flight → **new GitHub issue** (label `tech-debt` when useful), linked from the role handoff. Do **not** expand the current cast into unbounded cleanup.
-- Work still required for current `AC-N` stays in the current parent ticket — file a follow-up only for true future work.
-- Orchestrator/PM may batch tiny related debt into one follow-up issue; still must be a real issue, not chat-only.
+If a stray `[<slug>] · <role>` issue appears: close it as **not planned** with a short note that role-stage tickets are discontinued; keep AC tickets.
 
 ### What must be commented
 
@@ -157,7 +153,7 @@ gh issue comment N --body "$(cat <<'EOF'
 ### handoff-meta
 - slug: …
 - issue: #N
-- stage_issue: #M
+- stage_issue: #AC… | n/a | #N
 - role: …
 - status: done|blocked
 - paths: …
@@ -170,14 +166,13 @@ EOF
 )"
 ```
 
-### Stage issue template
+### AC child issue template
 
 ```bash
-gh issue create --assignee @me --title "[<slug>] · <role-or-phase>" --body "$(cat <<'EOF'
+gh issue create --assignee @me --title "AC-N …" --body "$(cat <<'EOF'
 Parent: #N
-Role / stage: <role> (qa: write|verify)
-AC: AC-… (or n/a)
-Done when: handoff posted on #N with status done; then close this issue.
+AC: AC-N
+Done when: acceptance met; qa verify (or owner) closes this issue after PASS.
 
 EOF
 )"
@@ -201,9 +196,18 @@ EOF
 
 Roles: `orchestrator`, `business-analyst`, `architect`, `pm`, `ui-ux`, `marketer`, `backend-dev`, `frontend-dev`, `qa`, `security`, `devops`, `tech-writer`.
 
+## Tech debt → follow-up issues (no silent debt)
+
+See also `no-tech-debt.mdc`.
+
+- Do **not** accumulate unpaid tech debt in code (`TODO`/`FIXME`/skipped tests/temporary hacks) without a filed issue.
+- Deferred / out-of-scope cleanup discovered mid-flight → **new GitHub issue** (label `tech-debt` when useful), linked from the role handoff. Do **not** expand the current cast into unbounded cleanup.
+- Work still required for current `AC-N` stays in the current parent ticket — file a follow-up only for true future work.
+- Orchestrator/PM may batch tiny related debt into one follow-up issue; still must be a real issue, not chat-only.
+
 ## Delegation
 
-- Put full context in the Task prompt (slug, **issue #N**, **stage_issue #M**, paths, **AC-***, ownership, constraints, depth S/M/L; for QA also **`phase: write|verify`**; for security optional **`phase: review|fix`**). Subagents do not see this chat. Remind the role to close `#M` on done and to file follow-up issues instead of silent tech debt.
+- Put full context in the Task prompt (slug, **issue #N** parent, optional **stage_issue** = AC ticket(s) / parent / omit, paths, **AC-***, ownership, constraints, depth S/M/L; for QA also **`phase: write|verify`**; for security optional **`phase: review|fix`**). Subagents do not see this chat. Remind roles to file follow-up issues instead of silent tech debt — **do not** create or close role-stage issues.
 - Launch independent roles in **one** message (parallel Task calls) **only** when the cast marks `∥`.
 - Resume a subagent for follow-ups when continuity helps.
 - Subagents inherit MCP including **agentmemory** — expect recall at start and `team-handoff` save at end.
@@ -231,5 +235,5 @@ Roles: `orchestrator`, `business-analyst`, `architect`, `pm`, `ui-ux`, `marketer
 - Eng weakening/skipping QA tests to go green; verify phase skipped after FE/BE
 - Spinning more than 2 fix→verify cycles without a new signal
 - Leaving the GitHub issue open after qa verify PASS when later cast roles were skipped
-- Running cast stages without creating stage issues, or leaving completed stage issues open
+- Creating role/stage GitHub issues (`[<slug>] · <role-or-phase>`) — **forbidden**; use parent + AC children only
 - Shipping silent tech debt (TODO/FIXME/skipped tests) without a follow-up GitHub issue
