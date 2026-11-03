@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { BarChart } from "@/components/BarChart";
+import { useEffect, useMemo, useState } from "react";
+import { CompactBarChart } from "@/components/CompactBarChart";
+import { PieChart } from "@/components/PieChart";
 import { Button } from "@/components/ui/button";
+import { Trash2Icon } from "lucide-react";
+import { RowIconActions } from "@/components/RowIconActions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,6 +38,7 @@ import {
   todayIsoDate,
   toDatetimeLocalValue,
 } from "@/lib/format";
+// formatWeekBucketLabel used via CompactBarChart bucket=week
 import { useI18n } from "@/lib/i18n";
 
 function pickSeries(
@@ -202,6 +206,18 @@ export function ReportSection() {
     },
   });
 
+
+  useEffect(() => {
+    if (!deleteEntry) return;
+    const id = window.setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-testid="entries-delete-confirm"]')
+        ?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [deleteEntry]);
+  // Focus confirm when delete dialog opens (AC-42 Enter)
+
   async function invalidateReport() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["time-entries"] }),
@@ -341,6 +357,7 @@ export function ReportSection() {
         {chartsEmpty ? (
           <div
             data-testid="report-chart-over-time"
+            data-chart-layout="compact"
             role="region"
             aria-label={t("charts.a11y.overTime")}
             className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
@@ -348,9 +365,10 @@ export function ReportSection() {
             <p data-testid="report-chart-empty">{t("charts.empty")}</p>
           </div>
         ) : (
-          <BarChart
+          <CompactBarChart
             testId="report-chart-over-time"
             data={clientOverTime}
+            bucket={bucket}
             emptyLabel={t("charts.empty")}
             emptyTestId="report-chart-empty"
             ariaLabel={t("charts.a11y.overTime")}
@@ -385,12 +403,13 @@ export function ReportSection() {
             </Button>
           </div>
         </div>
-        <BarChart
+        <PieChart
           testId="report-chart-breakdown"
           data={chartsEmpty ? [] : clientBreakdown}
           emptyLabel={t("charts.empty")}
           ariaLabel={t("charts.a11y.breakdown")}
           unassignedLabel={t("charts.unassigned")}
+          variant="donut"
         />
       </div>
 
@@ -474,24 +493,12 @@ export function ReportSection() {
                       : formatDuration(entry.durationSeconds ?? 0, locale)}
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEdit(entry)}
-                      >
-                        {t("entries.edit")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteEntry(entry)}
-                      >
-                        {t("entries.delete")}
-                      </Button>
-                    </div>
+                    <RowIconActions
+                      editLabel={t("entries.edit")}
+                      deleteLabel={t("entries.delete")}
+                      onEdit={() => openEdit(entry)}
+                      onDelete={() => setDeleteEntry(entry)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -573,7 +580,17 @@ export function ReportSection() {
           if (!open) setDeleteEntry(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent
+          data-testid="entries-delete-dialog"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            e.stopPropagation();
+            const id = deleteEntry?.id;
+            if (!id || deleteMutation.isPending) return;
+            deleteMutation.mutate(id);
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>{t("entries.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -585,6 +602,7 @@ export function ReportSection() {
             <Button
               type="button"
               variant="destructive"
+              data-testid="entries-delete-confirm"
               disabled={deleteMutation.isPending}
               onClick={() => {
                 const id = deleteEntry?.id;
@@ -592,6 +610,7 @@ export function ReportSection() {
                 deleteMutation.mutate(id);
               }}
             >
+              <Trash2Icon data-icon="trash" className="size-4" />
               {t("entries.delete")}
             </Button>
           </AlertDialogFooter>
