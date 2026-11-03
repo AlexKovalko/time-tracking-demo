@@ -3,15 +3,20 @@ name: dev-team
 description: >-
   Runs the Queply multi-role subagent pipeline driven by the PM role cast
   (BA, architect, PM, UI/UX, Marketer, backend-dev, frontend-dev, QA, security,
-  DevOps, tech-writer, orchestrator). Use when the user says dev-team, команда,
-  собери команду, feature team, or asks to orchestrate specialists for a task.
+  DevOps, tech-writer, orchestrator). Use ONLY when the user explicitly types
+  /dev-team (with optional task text). Do not trigger on soft phrases like
+  «собери команду», «команда», or «feature team» without /dev-team.
 ---
 
 # Dev team
 
+## Gate (hard)
+
+Invoke this skill / assemble the team **only** on an explicit `/dev-team` in the user message. Soft synonyms without `/dev-team` must not start the pipeline.
+
 ## Quick start
 
-User: «собери команду на задачу» or `/dev-team` with the task description.
+User: `/dev-team` + task description.
 
 Orchestrator (parent / `/orchestrator`): follow `.cursor/rules/dev-team-orchestration.mdc` and `.cursor/agents/*`.
 
@@ -69,6 +74,9 @@ Every role issue comment ends with `### handoff-meta` (slug, issue, role, status
 
 ## Anti-patterns
 
+WRONG: Start the team because the user said «собери команду» / «нужна команда» without `/dev-team`.  
+RIGHT: Wait for explicit `/dev-team`; otherwise work as a single agent.
+
 WRONG: Launch every roster role on a small bug.  
 RIGHT: Short cast; orchestrator executes only that cast.
 
@@ -83,6 +91,7 @@ RIGHT: Parent epic + AC child issues only; roles hand off via comments on the pa
 
 ## Checklist
 
+- [ ] User invoked explicit `/dev-team` (not soft phrasing alone)
 - [ ] Role cast published (ordered who in / who out); no launches outside cast
 - [ ] Specs path under `docs/specs/<slug>/` when non-trivial
 - [ ] Parent GitHub issue `#N` exists and is passed to every role

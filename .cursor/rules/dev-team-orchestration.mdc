@@ -1,11 +1,18 @@
 ---
-description: Delegate Queply work to custom subagents with PM role cast, shared checkout, AC-N, handoff-meta, and agentmemory handoffs
+description: Delegate Queply work to custom subagents with PM role cast, shared checkout, AC-N, handoff-meta, and agentmemory handoffs — only after explicit /dev-team
 alwaysApply: true
 ---
 
 # Dev team orchestration
 
-Parent Agent is the **orchestrator** (see also `.cursor/agents/orchestrator.md`). Prefer custom subagents in `.cursor/agents/` for role-shaped work. Do not invent parallel process that skips `task-intake.mdc` / grill / specs / user «ок» before production code.
+## Gate: explicit `/dev-team` only
+
+- **Start the multi-role team pipeline only when the user message contains the exact command `/dev-team`** (optionally with a task description after it).
+- Do **not** assemble the cast, launch BA/PM/orchestrator pipeline, or spawn role subagents because of soft phrasing («собери команду», «команда», «feature team», «dev-team», «оркестрируй») without `/dev-team`.
+- Without `/dev-team`: work as a normal single agent (or honor a **single** explicit role slash like `/backend-dev` / `/qa` if the user typed that). Do not invent a full team.
+- Continuations of an **already started** `/dev-team` stage (user «ок», «делай», answers to grill) may resume that cast — do not start a **new** team from soft phrasing alone.
+
+Parent Agent is the **orchestrator** (see also `.cursor/agents/orchestrator.md`) **only inside an active `/dev-team` run**. Prefer custom subagents in `.cursor/agents/` for role-shaped work when the gate is open. Do not invent parallel process that skips `task-intake.mdc` / grill / specs / user «ок» before production code.
 
 ## Role cast (PM owns staffing)
 
@@ -222,6 +229,7 @@ See also `no-tech-debt.mdc`.
 
 ## Anti-patterns
 
+- Assembling the multi-role team without an explicit `/dev-team` in the user message (soft «собери команду» / «команда» does not count)
 - Launching roles outside the PM role cast (or without updating cast after user override)
 - Starting FE/BE before user OK on a non-trivial feature
 - Starting FE/BE before **qa write** on a non-trivial behavior change (unless user explicitly skips)
