@@ -1,3 +1,4 @@
+import { RowIconActions } from "@/components/RowIconActions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -444,29 +445,19 @@ export function EmployeesSection() {
                         </p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <Link
                         to={`/employees/${employee.id}`}
                         className="inline-flex h-7 items-center rounded-lg border border-border px-2.5 text-[0.8rem] font-medium hover:bg-muted"
                       >
                         {t("employees.openProfile")}
                       </Link>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEdit(employee)}
-                      >
-                        {t("employees.edit")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeleteTarget(employee)}
-                      >
-                        {t("employees.delete")}
-                      </Button>
+                      <RowIconActions
+                        editLabel={t("employees.edit")}
+                        deleteLabel={t("employees.delete")}
+                        onEdit={() => openEdit(employee)}
+                        onDelete={() => setDeleteTarget(employee)}
+                      />
                     </div>
                   </div>
                 );
@@ -494,27 +485,15 @@ export function EmployeesSection() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
               >
                 <span className="font-medium">{dept.name}</span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditDept(dept);
-                      setEditDeptName(dept.name);
-                    }}
-                  >
-                    {t("departments.edit")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteDept(dept)}
-                  >
-                    {t("departments.delete")}
-                  </Button>
-                </div>
+                <RowIconActions
+                  editLabel={t("departments.edit")}
+                  deleteLabel={t("departments.delete")}
+                  onEdit={() => {
+                    setEditDept(dept);
+                    setEditDeptName(dept.name);
+                  }}
+                  onDelete={() => setDeleteDept(dept)}
+                />
               </div>
             ))
           )}
