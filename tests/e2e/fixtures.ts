@@ -1,4 +1,11 @@
-import { test as base, expect, type Locator, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import { API_BASE_URL } from "../helpers/env";
 
 /**
  * data-testid map from docs/specs/time-tracking-calendar/ux.md
@@ -23,6 +30,8 @@ export const tid = {
   employeesAddButton: "employees-add-button",
   employeesList: "employees-list",
   employeesPagination: "employees-pagination",
+  employeesPaginationPrev: "employees-pagination-prev",
+  employeesPaginationNext: "employees-pagination-next",
   employeesTabPeople: "employees-tab-people",
   employeesTabDepartments: "employees-tab-departments",
   employeeDepartmentSelect: "employee-department-select",
@@ -94,10 +103,13 @@ export const tid = {
   // Report + charts (AC-16, AC-27…29)
   reportFrom: "report-from",
   reportTo: "report-to",
+  reportApply: "report-apply",
   reportEntries: "report-entries",
   reportTotals: "report-totals",
   reportEmpty: "report-empty",
   reportExportButton: "report-export-button",
+  entriesEditSave: "entries-edit-save",
+  entriesEditDelete: "entries-edit-delete",
   reportChartOverTime: "report-chart-over-time",
   reportChartOverTimeDay: "report-chart-over-time-day",
   reportChartOverTimeWeek: "report-chart-over-time-week",
@@ -119,9 +131,38 @@ type Fixtures = {
   openApp: Page;
 };
 
+/** Stop any leftover running timers so elapsed chrome does not leak across tests. */
+export async function clearActiveTimers(
+  request: APIRequestContext,
+): Promise<void> {
+  try {
+    const res = await request.get(`${API_BASE_URL}/timers/active`);
+    if (!res.ok()) return;
+    const active = (await res.json()) as Array<{ employeeId: string }>;
+    if (!Array.isArray(active)) return;
+    for (const timer of active) {
+      await request.post(`${API_BASE_URL}/timers/stop`, {
+        data: { employeeId: timer.employeeId },
+      });
+    }
+  } catch {
+    /* API may be briefly unavailable; tests will surface failures themselves */
+  }
+}
+
 export const test = base.extend<Fixtures>({
-  openApp: async ({ page }, use) => {
-    await page.goto("/");
+  openApp: async ({ page, request }, use) => {
+    await clearActiveTimers(request);
+    // Retry once if nginx briefly restarts mid-suite
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 });
+        break;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        await page.waitForTimeout(1500);
+      }
+    }
     await expect(page.locator("body")).toBeVisible();
     await expect(page).toHaveURL(/\/employees\/?$/, { timeout: 20_000 });
     await expect(byTestId(page, tid.navEmployees)).toBeVisible();
@@ -130,6 +171,7 @@ export const test = base.extend<Fixtures>({
     await expect(byTestId(page, tid.employeesAddOpen)).toBeVisible();
     await expect(timerChromeRoot(page)).toBeVisible({ timeout: 20_000 });
     await use(page);
+    await clearActiveTimers(request);
   },
 });
 
@@ -201,29 +243,43 @@ export async function ensureTimerExpanded(page: Page): Promise<void> {
 /** Prefer period-* testids; fall back to week-* aliases. */
 export async function clickPeriodPrev(page: Page): Promise<void> {
   const modern = byTestId(page, tid.entriesPeriodPrev);
-  if (await modern.count()) {
+  if (await modern.isVisible().catch(() => false)) {
     await modern.click();
     return;
   }
-  await byTestId(page, tid.entriesWeekPrev).click();
+  await byTestId(page, tid.entriesWeekPrev).click({ force: true });
 }
 
 export async function clickPeriodNext(page: Page): Promise<void> {
   const modern = byTestId(page, tid.entriesPeriodNext);
-  if (await modern.count()) {
+  if (await modern.isVisible().catch(() => false)) {
     await modern.click();
     return;
   }
-  await byTestId(page, tid.entriesWeekNext).click();
+  await byTestId(page, tid.entriesWeekNext).click({ force: true });
 }
 
 export async function clickPeriodToday(page: Page): Promise<void> {
   const modern = byTestId(page, tid.entriesPeriodToday);
-  if (await modern.count()) {
+  if (await modern.isVisible().catch(() => false)) {
     await modern.click();
     return;
   }
-  await byTestId(page, tid.entriesWeekCurrent).click();
+  await byTestId(page, tid.entriesWeekCurrent).click({ force: true });
+}
+
+/** Stop running timer and wait until elapsed chrome is gone (avoids race with query invalidation). */
+export async function stopTimerUi(page: Page): Promise<void> {
+  await ensureTimerExpanded(page);
+  const stop = byTestId(page, tid.timerStopButton);
+  await expect(stop).toBeVisible({ timeout: 10_000 });
+  await stop.click();
+  await expect(byTestId(page, tid.timerElapsed)).toHaveCount(0, {
+    timeout: 15_000,
+  });
+  await expect(byTestId(page, tid.timerFabBadge)).toHaveCount(0, {
+    timeout: 5_000,
+  });
 }
 
 export async function createEmployeeUi(
@@ -237,11 +293,44 @@ export async function createEmployeeUi(
   const dialog = byTestId(page, tid.employeesCreateDialog);
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   await byTestId(page, tid.employeesNameInput).fill(name);
+  const createResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes("/employees") &&
+      r.request().method() === "POST" &&
+      !r.url().includes("/stats"),
+    { timeout: 15_000 },
+  );
   await byTestId(page, tid.employeesAddButton).click();
+  const res = await createResponse;
+  if (!res.ok()) {
+    throw new Error(`POST /employees failed: ${res.status()} ${await res.text()}`);
+  }
   await expect(dialog).toHaveCount(0, { timeout: 15_000 });
-  await expect(byTestId(page, tid.employeesList)).toContainText(name, {
-    timeout: 15_000,
-  });
+
+  // FE jumps to the page with the new employee after create; walk pages if needed.
+  const list = byTestId(page, tid.employeesList);
+  await expect
+    .poll(
+      async () => {
+        if ((await list.innerText()).includes(name)) return true;
+        const pagination = byTestId(page, tid.employeesPagination);
+        if ((await pagination.count()) === 0) return false;
+        let next = byTestId(page, tid.employeesPaginationNext);
+        if ((await next.count()) === 0) {
+          next = pagination.getByRole("button").nth(1);
+        }
+        if ((await next.count()) === 0) return false;
+        const disabled = await next
+          .isDisabled({ timeout: 1_000 })
+          .catch(() => true);
+        if (disabled) return false;
+        await next.click();
+        return (await list.innerText()).includes(name);
+      },
+      { timeout: 20_000, intervals: [200, 400, 800] },
+    )
+    .toBe(true);
+  await expect(list).toContainText(name, { timeout: 5_000 });
 }
 
 export async function selectEmployeeForTimer(
@@ -250,12 +339,21 @@ export async function selectEmployeeForTimer(
 ): Promise<void> {
   await ensureTimerExpanded(page);
   const select = byTestId(page, tid.timerEmployeeSelect);
+  await expect(select).toBeEnabled({ timeout: 15_000 });
   const tag = await select.evaluate((el) => el.tagName.toLowerCase());
   if (tag === "select") {
+    await expect
+      .poll(async () => {
+        const labels = await select.locator("option").allTextContents();
+        return labels.some((l) => l.trim() === name);
+      }, { timeout: 15_000 })
+      .toBe(true);
     await select.selectOption({ label: name });
   } else {
     await select.click();
-    await page.getByRole("option", { name, exact: true }).click();
+    const option = page.getByRole("option", { name, exact: true });
+    await expect(option).toBeVisible({ timeout: 15_000 });
+    await option.click();
   }
 }
 
@@ -282,7 +380,14 @@ export async function setReportPeriod(
   }
   await byTestId(page, tid.reportFrom).fill(from);
   await byTestId(page, tid.reportTo).fill(to);
-  const apply = page.getByRole("button", { name: /показать|show|apply|применить/i });
+  const applyById = byTestId(page, tid.reportApply);
+  if (await applyById.count()) {
+    await applyById.click();
+    return;
+  }
+  const apply = page.getByRole("button", {
+    name: /показать|show|apply|применить/i,
+  });
   if (await apply.count()) {
     await apply.click();
   }

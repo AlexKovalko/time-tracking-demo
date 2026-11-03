@@ -40,14 +40,29 @@ test.describe("AC-24…26 · employee profile (#55–#57)", () => {
 
   test("profile stats for period (AC-25 #56)", async ({ openApp: page }) => {
     await gotoEmployees(page);
-    const profileLink = page.getByRole("link", { name: /профиль|profile/i });
-    if (await profileLink.count()) {
-      await profileLink.first().click();
-    } else {
-      await byTestId(page, tid.employeesList)
-        .locator("a, button, [data-testid^='employee-row']")
-        .first()
-        .click();
+    // Prefer seeded FIO (Cyrillic) — page-1 often starts with QA* smoke employees
+    // that have no history; walk Next until a human seed name is visible.
+    const list = byTestId(page, tid.employeesList);
+    let opened = false;
+    for (let i = 0; i < 25; i += 1) {
+      const seedRow = list.locator(":scope > *").filter({
+        hasText: /[А-ЯЁа-яё]{3,}/,
+      });
+      if ((await seedRow.count()) > 0) {
+        await seedRow
+          .first()
+          .getByRole("link", { name: /профиль|profile/i })
+          .click();
+        opened = true;
+        break;
+      }
+      const next = byTestId(page, tid.employeesPaginationNext);
+      if ((await next.count()) === 0 || (await next.isDisabled())) break;
+      await next.click();
+      await expect(list).toBeVisible();
+    }
+    if (!opened) {
+      await page.getByRole("link", { name: /профиль|profile/i }).first().click();
     }
 
     const stats = byTestId(page, tid.employeeProfileStats);

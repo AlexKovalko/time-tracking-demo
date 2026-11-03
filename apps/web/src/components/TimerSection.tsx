@@ -46,8 +46,8 @@ export function TimerSection() {
   const [a11yMessage, setA11yMessage] = useState("");
 
   const employeesQuery = useQuery({
-    queryKey: queryKeys.employees(1, 50),
-    queryFn: () => api.listEmployees({ page: 1, limit: 50 }),
+    queryKey: queryKeys.employeesAll,
+    queryFn: api.listAllEmployees,
   });
 
   const activeQuery = useQuery({
@@ -56,7 +56,7 @@ export function TimerSection() {
     refetchInterval: 5000,
   });
 
-  const employees = employeesQuery.data?.items ?? [];
+  const employees = employeesQuery.data ?? [];
   const activeTimers = activeQuery.data ?? [];
 
   const selectedRunning: ActiveTimer | undefined = useMemo(() => {

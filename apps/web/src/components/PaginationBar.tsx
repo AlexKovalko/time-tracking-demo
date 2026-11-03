@@ -34,6 +34,7 @@ export function PaginationBar({
           type="button"
           size="sm"
           variant="outline"
+          data-testid={`${testId}-prev`}
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
@@ -43,6 +44,7 @@ export function PaginationBar({
           type="button"
           size="sm"
           variant="outline"
+          data-testid={`${testId}-next`}
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >

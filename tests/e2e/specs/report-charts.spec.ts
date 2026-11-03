@@ -14,23 +14,28 @@ test.describe("AC-16 / AC-27…29 · report charts (#47, #58–#60)", () => {
   test("seed period shows meaningful totals for ≥2 employees (AC-16 #47)", async ({
     openApp: page,
   }) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localIso = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - 28);
-    const fromIso = from.toISOString().slice(0, 10);
-    const toIso = to.toISOString().slice(0, 10);
-    await setReportPeriod(page, fromIso, toIso);
+    await setReportPeriod(page, localIso(from), localIso(to));
 
     const totals = byTestId(page, tid.reportTotals);
     await expect(totals).toBeVisible({ timeout: 15_000 });
-    const text = await totals.innerText();
-    expect(text.length).toBeGreaterThan(0);
-    // At least two employee lines with non-zero-looking content
-    const lines = text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => /[A-Za-zА-Яа-я]/.test(l) && /\d/.test(l));
-    expect(lines.length).toBeGreaterThanOrEqual(2);
+    // Flex rows put name + duration across spans; count employee <li> (exclude grand total)
+    await expect
+      .poll(
+        async () =>
+          totals
+            .locator("li")
+            .filter({ hasNotText: /итого|total|grand/i })
+            .count(),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThanOrEqual(2);
+    await expect(totals).toContainText(/\d/);
   });
 
   test("hours-over-time chart with day|week toggle (AC-27 #58)", async ({

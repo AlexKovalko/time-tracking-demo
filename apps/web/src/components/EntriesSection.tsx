@@ -138,10 +138,10 @@ export function EntriesSection() {
       : formatDayPeriodLabel(anchorDate, intlLocale);
 
   const employeesQuery = useQuery({
-    queryKey: queryKeys.employees(1, 50),
-    queryFn: () => api.listEmployees({ page: 1, limit: 50 }),
+    queryKey: queryKeys.employeesAll,
+    queryFn: api.listAllEmployees,
   });
-  const employees = employeesQuery.data?.items ?? [];
+  const employees = employeesQuery.data ?? [];
 
   const listQuery = useQuery({
     queryKey: queryKeys.timeEntries({
@@ -1016,6 +1016,7 @@ export function EntriesSection() {
               <Button
                 type="button"
                 variant="destructive"
+                data-testid="entries-edit-delete"
                 onClick={() => {
                   setDeleteEntry(editEntry);
                   setEditEntry(null);
@@ -1025,6 +1026,7 @@ export function EntriesSection() {
               </Button>
               <Button
                 type="button"
+                data-testid="entries-edit-save"
                 onClick={() => updateMutation.mutate()}
                 disabled={updateMutation.isPending}
               >

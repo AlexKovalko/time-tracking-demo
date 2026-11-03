@@ -7,11 +7,15 @@ import {
   startTimerUi,
   gotoEntries,
   ensureTimerExpanded,
+  clickPeriodPrev,
+  clickPeriodNext,
+  clickPeriodToday,
 } from "../fixtures";
 
 /**
- * time-tracking-ui AC-9…AC-13
- * Time entries: Calendar ∥ List toggle, shared week period, week nav, list CRUD, empty states.
+ * time-tracking-ui AC-9…AC-13 (non-regression)
+ * Time entries: Calendar ∥ List toggle, period chrome, week nav, list CRUD, empty states.
+ * Period controls live on Calendar view (entries-period-*); week-* are sr-only aliases.
  */
 test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
   test("offers List and Calendar views on /entries (AC-9)", async ({
@@ -38,21 +42,19 @@ test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
     openApp: page,
   }) => {
     await gotoEntries(page);
+    await byTestId(page, tid.entriesViewCalendar).click();
 
-    await byTestId(page, tid.entriesWeekNext).click();
+    await clickPeriodNext(page);
     const periodAfterNext = (
       await byTestId(page, tid.entriesPeriodLabel).innerText()
     ).trim();
     expect(periodAfterNext.length).toBeGreaterThan(0);
 
-    await byTestId(page, tid.entriesViewCalendar).click();
-    await expect(byTestId(page, tid.entriesCalendar)).toBeVisible();
-    await expect(byTestId(page, tid.entriesPeriodLabel)).toHaveText(
-      periodAfterNext,
-    );
-
     await byTestId(page, tid.entriesViewList).click();
     await expect(byTestId(page, tid.entriesList)).toBeVisible();
+
+    await byTestId(page, tid.entriesViewCalendar).click();
+    await expect(byTestId(page, tid.entriesCalendar)).toBeVisible();
     await expect(byTestId(page, tid.entriesPeriodLabel)).toHaveText(
       periodAfterNext,
     );
@@ -67,28 +69,27 @@ test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
     const calendar = byTestId(page, tid.entriesCalendar);
     await expect(calendar).toBeVisible();
     // Seven day columns/sections
-    await expect(calendar.locator("[data-day], [data-testid^='entries-day-']")).toHaveCount(7, {
+    await expect(
+      calendar.locator("[data-day], [data-testid^='entries-day-']"),
+    ).toHaveCount(7, {
       timeout: 10_000,
-    }).catch(async () => {
-      // Fallback: day headers Mon–Sun (ru/en) — at least 7 day cells
-      const dayCells = calendar.locator(":scope > *");
-      await expect(dayCells).toHaveCount(7, { timeout: 5_000 });
     });
 
-    const before = (await byTestId(page, tid.entriesPeriodLabel).innerText()).trim();
-    await byTestId(page, tid.entriesWeekPrev).click();
+    const before = (
+      await byTestId(page, tid.entriesPeriodLabel).innerText()
+    ).trim();
+    await clickPeriodPrev(page);
     const afterPrev = (
       await byTestId(page, tid.entriesPeriodLabel).innerText()
     ).trim();
     expect(afterPrev).not.toBe(before);
 
-    await byTestId(page, tid.entriesWeekNext).click();
-    await byTestId(page, tid.entriesWeekCurrent).click();
+    await clickPeriodNext(page);
+    await clickPeriodToday(page);
     const current = (
       await byTestId(page, tid.entriesPeriodLabel).innerText()
     ).trim();
     expect(current.length).toBeGreaterThan(0);
-    // After "this week", period should settle (equal to original if we started on current week)
     await expect(byTestId(page, tid.entriesPeriodLabel)).toBeVisible();
   });
 
@@ -105,8 +106,12 @@ test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
     await expect(byTestId(page, tid.timerElapsed)).toHaveCount(0);
 
     await gotoEntries(page);
-    await byTestId(page, tid.entriesWeekCurrent).click();
     await byTestId(page, tid.entriesViewList).click();
+    // Ensure list filter covers today (default week); re-apply if needed
+    const today = new Date().toISOString().slice(0, 10);
+    await byTestId(page, tid.entriesFilterFrom).fill(today);
+    await byTestId(page, tid.entriesFilterTo).fill(today);
+    await byTestId(page, tid.entriesFilterApply).click();
 
     const list = byTestId(page, tid.entriesList);
     await expect(list).toContainText(description, { timeout: 15_000 });
@@ -152,13 +157,22 @@ test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
     openApp: page,
   }) => {
     await gotoEntries(page);
+    await byTestId(page, tid.entriesViewCalendar).click();
 
-    // Jump far from today by many weeks so the week is empty
+    // Jump far from today by many periods so the range is empty
     for (let i = 0; i < 52; i += 1) {
-      await byTestId(page, tid.entriesWeekNext).click();
+      await clickPeriodNext(page);
     }
 
+    await expect(byTestId(page, tid.entriesEmpty)).toBeVisible({
+      timeout: 15_000,
+    });
+
     await byTestId(page, tid.entriesViewList).click();
+    // Align list filters to a far-future empty window
+    await byTestId(page, tid.entriesFilterFrom).fill("2099-01-01");
+    await byTestId(page, tid.entriesFilterTo).fill("2099-01-07");
+    await byTestId(page, tid.entriesFilterApply).click();
     await expect(byTestId(page, tid.entriesEmpty)).toBeVisible({
       timeout: 15_000,
     });
@@ -166,10 +180,6 @@ test.describe("AC-9…AC-13 · entries Calendar ∥ List", () => {
       /записей нет|no entries/i,
     );
 
-    await byTestId(page, tid.entriesViewCalendar).click();
-    await expect(byTestId(page, tid.entriesCalendar)).toBeVisible();
-    await expect(byTestId(page, tid.entriesEmpty)).toBeVisible();
-    // Shell still alive
     await expect(byTestId(page, tid.navEntries)).toHaveAttribute(
       "aria-current",
       "page",

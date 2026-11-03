@@ -119,10 +119,25 @@ export function EmployeesSection() {
 
   const createMutation = useMutation({
     mutationFn: (input: EmployeeInput) => api.createEmployee(input),
-    onSuccess: async () => {
+    onSuccess: async (created) => {
       setCreateOpen(false);
       setFormError(null);
       await invalidatePeople();
+      // Name-sorted list: jump to the page that contains the new employee.
+      const limit = pageSize;
+      let p = 1;
+      for (;;) {
+        const res = await api.listEmployees({ page: p, limit });
+        if (res.items.some((e) => e.id === created.id)) {
+          setPage(p);
+          break;
+        }
+        if (res.items.length === 0 || p * limit >= res.total || p > 100) {
+          setPage(1);
+          break;
+        }
+        p += 1;
+      }
     },
     onError: () => setFormError(t("employees.errors.saveFailed")),
   });

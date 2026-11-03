@@ -292,7 +292,11 @@ export function ReportSection() {
             onChange={(e) => setTo(e.target.value)}
           />
         </div>
-        <Button type="button" onClick={applyPeriod}>
+        <Button
+          type="button"
+          data-testid="report-apply"
+          onClick={applyPeriod}
+        >
           {t("report.apply")}
         </Button>
       </div>

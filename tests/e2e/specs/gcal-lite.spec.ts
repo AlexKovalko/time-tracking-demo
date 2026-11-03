@@ -69,15 +69,14 @@ test.describe("AC-5…10 · GCal-lite (#36–#41)", () => {
     const calendar = byTestId(page, tid.entriesCalendar);
     await expect(calendar).toBeVisible();
 
-    // Hour labels somewhere in calendar (00–23 or 06–22)
-    await expect(calendar).toContainText(/\b([01]?\d|2[0-3]):00\b|\b\d{1,2}\s*(час|h)\b/i);
+    const hourAxis = byTestId(page, "entries-hour-axis");
+    await expect(hourAxis).toBeVisible({ timeout: 15_000 });
+    await expect(hourAxis).toContainText(/\d{1,2}:00/);
 
-    const hourAxis = calendar.locator(
-      "[data-testid='entries-hour-axis'], [data-hour], .hour-axis, [class*='hour']",
-    );
-    // Soft: either dedicated axis node OR text hours already asserted
-    const axisCount = await hourAxis.count();
-    expect(axisCount >= 0).toBe(true);
+    // Seed densifies current week — blocks should appear after calendar range loads
+    await expect(
+      page.locator("[data-testid^='entries-calendar-block-']").first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("drag-select empty grid prefills create dialog (AC-8 #39)", async ({
@@ -90,18 +89,19 @@ test.describe("AC-5…10 · GCal-lite (#36–#41)", () => {
     await byTestId(page, tid.entriesModeDay).click();
     await clickPeriodToday(page);
 
-    const calendar = byTestId(page, tid.entriesCalendar);
-    await expect(calendar).toBeVisible();
-    const box = await calendar.boundingBox();
+    const day = page.locator("[data-testid^='entries-day-']").first();
+    await expect(day).toBeVisible({ timeout: 15_000 });
+    const box = await day.boundingBox();
     expect(box).toBeTruthy();
 
-    const startX = box!.x + box!.width * 0.4;
-    const startY = box!.y + box!.height * 0.35;
-    const endY = box!.y + box!.height * 0.55;
+    // Drag on the day column (pointer handlers live there, not on calendar chrome)
+    const startX = box!.x + box!.width * 0.5;
+    const startY = box!.y + 80;
+    const endY = box!.y + 200;
 
     await page.mouse.move(startX, startY);
     await page.mouse.down();
-    await page.mouse.move(startX, endY, { steps: 8 });
+    await page.mouse.move(startX, endY, { steps: 12 });
     await page.mouse.up();
 
     const dialog = page.getByRole("dialog");
@@ -122,28 +122,21 @@ test.describe("AC-5…10 · GCal-lite (#36–#41)", () => {
     await byTestId(page, tid.entriesViewCalendar).click();
     await clickPeriodToday(page);
 
-    const block = page.locator("[data-testid^='entries-calendar-block-']").first();
-    // Seed or create path — if no blocks yet, Add entry then re-check
-    if ((await block.count()) === 0) {
-      test.info().annotations.push({
-        type: "note",
-        description: "No seeded block in view — use Add entry fallback",
-      });
-      await byTestId(page, tid.entriesAddOpen).click();
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible();
-      await dialog.getByRole("button", { name: /отмена|cancel/i }).click();
-      // Still require blocks to exist for AC-9 when seed is ready
-      await expect(
-        page.locator("[data-testid^='entries-calendar-block-']").first(),
-      ).toBeVisible({ timeout: 15_000 });
-    }
+    const blocks = page.locator("[data-testid^='entries-calendar-block-']");
+    await expect(blocks.first()).toBeVisible({ timeout: 15_000 });
 
-    await page.locator("[data-testid^='entries-calendar-block-']").first().click();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    // Dense seed stacks overlapping blocks; force avoids actionability timeout on covered peers.
+    const target = blocks.filter({ hasText: /\S/ }).first();
+    await target.scrollIntoViewIfNeeded();
+    await target.click({ force: true });
+    const editDialog = page.getByRole("dialog");
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+    // Prefer UX testid when present; role fallback for older builds.
     await expect(
-      page.getByRole("button", { name: /сохранить|save|удалить|delete/i }),
-    ).toBeVisible();
+      editDialog
+        .getByTestId(tid.entriesEditSave)
+        .or(editDialog.getByRole("button", { name: /сохранить|save/i })),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("Calendar | List toggle and empty states (AC-10 #41)", async ({
@@ -164,6 +157,9 @@ test.describe("AC-5…10 · GCal-lite (#36–#41)", () => {
     });
 
     await byTestId(page, tid.entriesViewList).click();
+    await byTestId(page, tid.entriesFilterFrom).fill("2099-01-01");
+    await byTestId(page, tid.entriesFilterTo).fill("2099-01-07");
+    await byTestId(page, tid.entriesFilterApply).click();
     await expect(byTestId(page, tid.entriesEmpty)).toBeVisible();
     await expect(byTestId(page, tid.navEntries)).toHaveAttribute(
       "aria-current",

@@ -175,6 +175,21 @@ export const api = {
     return asPaginated(data, page, limit);
   },
 
+  /** Page through employees for selects (API max limit is 50). */
+  listAllEmployees: async (): Promise<Employee[]> => {
+    const limit = 50;
+    const all: Employee[] = [];
+    let page = 1;
+    for (;;) {
+      const res = await api.listEmployees({ page, limit });
+      all.push(...res.items);
+      if (all.length >= res.total || res.items.length === 0) break;
+      page += 1;
+      if (page > 200) break;
+    }
+    return all;
+  },
+
   getEmployee: (id: string) =>
     request<Employee>(`/api/employees/${id}`).then((r) => r.data),
 
@@ -290,9 +305,8 @@ export const api = {
     q.set("to", to);
     if (extra?.employeeId) q.set("employeeId", extra.employeeId);
     if (extra?.q) q.set("q", extra.q);
-    // Ask for a large page so calendar gets full visible range
-    q.set("page", "1");
-    q.set("limit", "500");
+    // Omit page/limit so API returns the full range array (calendar contract).
+    // Sending limit>50 is rejected by DTO @Max(50) and yields empty calendar.
     const { data } = await request<TimeEntry[] | Paginated<TimeEntry>>(
       `/api/time-entries?${q}`,
     );
@@ -366,6 +380,7 @@ export const api = {
 export const queryKeys = {
   employees: (page?: number, limit?: number) =>
     ["employees", page ?? "all", limit ?? "default"] as const,
+  employeesAll: ["employees", "all-pages"] as const,
   employee: (id: string) => ["employees", id] as const,
   employeeStats: (id: string, from: string, to: string) =>
     ["employees", id, "stats", from, to] as const,
