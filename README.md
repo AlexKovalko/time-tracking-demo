@@ -24,7 +24,7 @@ docker compose up --build
 | `nginx` | `http://127.0.0.1:8081` | UI + proxy `/api` → API |
 | volume `sqlite_data` → **`time_tracking_demo_sqlite_data`** | `/data/time-tracking-demo.sqlite` в контейнере | персистентность после restart (**AC-11**) |
 
-**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте UI на **8080** — порт оставляем другим стекам (например Queply). Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`.
+**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте UI на **8080** — порт оставляем другим стекам (например Queply). Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`. Не поднимайте Compose `nginx` и `vite preview` на одном **:8081** одновременно (второй binder / nginx exit) — см. [`docs/runbook-launch.md`](docs/runbook-launch.md).
 
 Образы: **только pnpm** (`corepack prepare pnpm@11.9.0`). Native `better-sqlite3`: в API Dockerfile — `python3`/`make`/`g++`; в `pnpm-workspace.yaml` — `onlyBuiltDependencies` / `allowBuilds`. Healthchecks: API (`GET /api/employees`), nginx (`wget` `/`).
 

@@ -164,7 +164,7 @@ As in `product.md` (timer FAB, GCal-lite, filters/pagination, names/seed, shell,
 Departments CRUD; employee profile fields; seed depts/profile; list secondary signal; profile view+stats+filtered entries; charts over time + breakdown; empty charts; reseed densifies chart data.
 
 ### AC-31 Duration display
-Shared util; ru `ч/м/с`, en `h/m/s`; examples `48ч`, `4ч 20м`, `2м 5с`; skip zero higher parts; no `0ч`; QA asserts format.
+Shared util; ru `ч/м/с`, en `h/m/s`; examples `48ч`, `4ч 20м`, `2м 5с`; skip zero higher parts; no `0ч`; when hours present truncate seconds (`2ч 26м 19с` → `2ч 26м`); QA asserts format.
 
 ### AC-32 Interval display
 Same-day strict:

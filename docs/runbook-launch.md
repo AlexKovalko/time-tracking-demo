@@ -30,6 +30,8 @@ Env catalog: [`docs/env.md`](env.md), template [`.env.example`](../.env.example)
 | **8080** | No | Frequently another project (other local stacks); not this app |
 | **3000** | Yes (API) | Nest |
 
+**Exclusive :8081:** do not run Compose `nginx` and Vite preview on the same host port at once — the second binder fails / nginx exits, and mid-suite `compose up` recreate can flap UI under E2E. Prefer one UI path: Compose nginx **or** `vite preview --port 8081` (overflow → **8082** + `WEB_BASE_URL`).
+
 Smoke after `up`:
 
 ```bash
