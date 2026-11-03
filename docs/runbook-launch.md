@@ -17,6 +17,8 @@ docker compose up --build
 
 Health: Compose `api` → `GET /api/employees`; `nginx` → `wget` `/`. Volume key `sqlite_data` / Docker name **`time_tracking_demo_sqlite_data`** → `/data/time-tracking-demo.sqlite` keeps data across `down`/`up` without `-v` (**AC-11**). Wipe: `docker compose down -v`.
 
+**Force reseed (AC-17 / AC-30 densify):** `SEED_ON_BOOT` alone does not purge existing volume data. One-shot: `SEED_FORCE=1 docker compose up -d api` (then unset). Local: `pnpm --filter api seed -- --force`. Dense seed includes departments, profiles, and chart/report-ready entries.
+
 Env catalog: [`docs/env.md`](env.md), template [`.env.example`](../.env.example).
 
 ### Ports — do not confuse stacks

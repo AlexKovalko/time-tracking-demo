@@ -1,6 +1,12 @@
 # Time Tracking Demo — API (NestJS + SQLite volume) + nginx (static React UI, /api proxy).
 # Host ports: API 3000, UI 8081→80. Keep UI on 8081 — host :8080 is often taken
-# by unrelated nginx (returns 403). E2E: WEB_BASE_URL=http://localhost:8081
+# by unrelated stacks (e.g. Queply) and must stay free. E2E: WEB_BASE_URL=http://localhost:8081
+#
+# Force reseed (AC-17 / AC-30 densify): SEED_FORCE=true|1 on API boot wipes departments /
+# employees / time_entries then loads dense demo data. Caveat: named volume sqlite_data
+# persists across `down`/`up`; SEED_ON_BOOT alone does NOT purge existing rows — use
+# SEED_FORCE=1 for one boot, or `docker compose down -v` then `up --build`.
+# Local CLI (against host SQLITE_PATH): pnpm --filter api seed -- --force
 name: time-tracking-demo
 
 services:
@@ -18,6 +24,8 @@ services:
       # Persist DB on named volume (AC-11). Override via .env if needed.
       SQLITE_PATH: /data/time-tracking-demo.sqlite
       SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
+      # One-shot purge + dense reseed (AC-17/AC-30). Default false so restarts keep data.
+      SEED_FORCE: ${SEED_FORCE:-false}
     volumes:
       - sqlite_data:/data
     healthcheck:
@@ -39,7 +47,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     ports:
-      # Published host port 8081 → container :80 (nginx). Do not map 8080 by default.
+      # Published host port 8081 → container :80 (nginx). Do not map 8080 (Queply / other).
       - "8081:80"
     depends_on:
       api:
@@ -54,5 +62,6 @@ services:
 
 volumes:
   # Named volume keeps employees + time entries (incl. running) across compose restarts.
+  # Caveat: SEED_ON_BOOT=true does not clear existing data; use SEED_FORCE or down -v.
   sqlite_data:
     name: time_tracking_demo_sqlite_data

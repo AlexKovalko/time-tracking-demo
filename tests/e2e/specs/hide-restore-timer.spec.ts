@@ -9,10 +9,10 @@ import {
 } from "../fixtures";
 
 /**
- * time-tracking-ui AC-7 (baseline hide/restore non-regression)
+ * AC-3 (#34) FAB hide/restore non-regression (baseline rules) (baseline hide/restore non-regression)
  * First hide → confirm → hide; restore; stop while collapsed.
  */
-test.describe("AC-7 · hide / restore / stop while collapsed", () => {
+test.describe("AC-3 · hide / restore / stop while collapsed", () => {
   test("first hide shows confirm; hide then restore; stop from collapsed", async ({
     openApp: page,
   }) => {

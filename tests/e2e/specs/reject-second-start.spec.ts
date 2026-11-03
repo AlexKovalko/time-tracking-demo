@@ -9,10 +9,10 @@ import {
 } from "../fixtures";
 
 /**
- * time-tracking-ui AC-8
+ * AC-4 (#35) max one running timer
  * Reject second Start while the same employee already has a running timer.
  */
-test.describe("AC-8 · reject second Start while running", () => {
+test.describe("AC-4 · reject second Start while running", () => {
   test("shows inline already-running error and keeps a single running timer", async ({
     openApp: page,
   }) => {

@@ -1,11 +1,19 @@
-import { test as base, expect, type Locator, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import { API_BASE_URL } from "../helpers/env";
 
 /**
- * data-testid map from docs/specs/time-tracking-ui/ux.md §12
- * (+ baseline timer/report ids still valid).
+ * data-testid map from docs/specs/time-tracking-calendar/ux.md
+ * (+ aliases for time-tracking-ui baseline ids).
+ * AC tickets: #32–#63.
  */
 export const tid = {
-  // Chrome / nav (AC-1, AC-2, AC-15)
+  // Chrome / nav (AC-18)
   navEmployees: "nav-employees",
   navEntries: "nav-entries",
   navReport: "nav-report",
@@ -14,15 +22,44 @@ export const tid = {
   localeRu: "locale-ru",
   localeEn: "locale-en",
 
-  // Employees (AC-4, AC-5)
+  // Employees (AC-13, AC-21, AC-23)
   employeesAddOpen: "employees-add-open",
   employeesCreateDialog: "employees-create-dialog",
   employeesEditDialog: "employees-edit-dialog",
   employeesNameInput: "employees-name-input",
   employeesAddButton: "employees-add-button",
   employeesList: "employees-list",
+  employeesPagination: "employees-pagination",
+  employeesPaginationPrev: "employees-pagination-prev",
+  employeesPaginationNext: "employees-pagination-next",
+  employeesTabPeople: "employees-tab-people",
+  employeesTabDepartments: "employees-tab-departments",
+  employeeDepartmentSelect: "employee-department-select",
+  employeeTitleInput: "employee-title-input",
+  employeeEmailInput: "employee-email-input",
+  employeePhoneInput: "employee-phone-input",
+  employeeRowSecondary: "employee-row-secondary",
 
-  // Sticky timer (AC-6, AC-7, AC-8)
+  // Departments (AC-20)
+  departmentsList: "departments-list",
+  departmentsAddOpen: "departments-add-open",
+  departmentsNameInput: "departments-name-input",
+  departmentsAddButton: "departments-add-button",
+
+  // Employee profile (AC-24…26)
+  employeeProfile: "employee-profile",
+  employeeProfileBack: "employee-profile-back",
+  employeeProfileName: "employee-profile-name",
+  employeeProfileStats: "employee-profile-stats",
+  employeeProfileFilterFrom: "employee-profile-filter-from",
+  employeeProfileFilterTo: "employee-profile-filter-to",
+  employeeProfileFilterQ: "employee-profile-filter-q",
+  employeeProfileEntries: "employee-profile-entries",
+  employeeProfileEmpty: "employee-profile-empty",
+
+  // FAB timer (AC-1…AC-4) — canonical; launcher/collapsed = aliases
+  timerFab: "timer-fab",
+  timerFabBadge: "timer-fab-badge",
   timerPanel: "timer-panel",
   timerLauncher: "timer-launcher",
   timerEmployeeSelect: "timer-employee-select",
@@ -38,9 +75,15 @@ export const tid = {
   timerHideConfirmEnd: "timer-hide-confirm-end",
   timerHideConfirmHide: "timer-hide-confirm-hide",
 
-  // Time entries Calendar ∥ List (AC-9…AC-13)
+  // Time entries Calendar ∥ List (AC-5…AC-12)
   entriesViewList: "entries-view-list",
   entriesViewCalendar: "entries-view-calendar",
+  entriesModeWeek: "entries-mode-week",
+  entriesModeDay: "entries-mode-day",
+  entriesPeriodPrev: "entries-period-prev",
+  entriesPeriodNext: "entries-period-next",
+  entriesPeriodToday: "entries-period-today",
+  // Aliases from prior week-only chrome
   entriesWeekPrev: "entries-week-prev",
   entriesWeekNext: "entries-week-next",
   entriesWeekCurrent: "entries-week-current",
@@ -49,52 +92,109 @@ export const tid = {
   entriesCalendar: "entries-calendar",
   entriesEmpty: "entries-empty",
   entriesAddOpen: "entries-add-open",
+  entriesFilterEmployee: "entries-filter-employee",
+  entriesFilterFrom: "entries-filter-from",
+  entriesFilterTo: "entries-filter-to",
+  entriesFilterQ: "entries-filter-q",
+  entriesFilterApply: "entries-filter-apply",
+  entriesFilterClear: "entries-filter-clear",
+  entriesPagination: "entries-pagination",
 
-  // Report (AC-14)
+  // Report + charts (AC-16, AC-27…29)
   reportFrom: "report-from",
   reportTo: "report-to",
+  reportApply: "report-apply",
   reportEntries: "report-entries",
   reportTotals: "report-totals",
   reportEmpty: "report-empty",
   reportExportButton: "report-export-button",
+  entriesEditSave: "entries-edit-save",
+  entriesEditDelete: "entries-edit-delete",
+  reportChartOverTime: "report-chart-over-time",
+  reportChartOverTimeDay: "report-chart-over-time-day",
+  reportChartOverTimeWeek: "report-chart-over-time-week",
+  reportChartBreakdown: "report-chart-breakdown",
+  reportChartBreakdownEmployees: "report-chart-breakdown-employees",
+  reportChartBreakdownDepartments: "report-chart-breakdown-departments",
+  reportChartEmpty: "report-chart-empty",
 } as const;
+
+export const UUID_LABEL_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function byTestId(page: Page, id: string): Locator {
   return page.getByTestId(id);
 }
 
 type Fixtures = {
-  /** Open SPA at / → /employees; chrome + sticky timer reachable (time-tracking-ui IA). */
+  /** Open SPA at / → /employees; chrome + FAB timer reachable. */
   openApp: Page;
 };
 
+/** Stop any leftover running timers so elapsed chrome does not leak across tests. */
+export async function clearActiveTimers(
+  request: APIRequestContext,
+): Promise<void> {
+  try {
+    const res = await request.get(`${API_BASE_URL}/timers/active`);
+    if (!res.ok()) return;
+    const active = (await res.json()) as Array<{ employeeId: string }>;
+    if (!Array.isArray(active)) return;
+    for (const timer of active) {
+      await request.post(`${API_BASE_URL}/timers/stop`, {
+        data: { employeeId: timer.employeeId },
+      });
+    }
+  } catch {
+    /* API may be briefly unavailable; tests will surface failures themselves */
+  }
+}
+
 export const test = base.extend<Fixtures>({
-  openApp: async ({ page }, use) => {
-    await page.goto("/");
+  openApp: async ({ page, request }, use) => {
+    await clearActiveTimers(request);
+    // Retry once if nginx briefly restarts mid-suite
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await page.goto("/", { waitUntil: "domcontentloaded", timeout: 20_000 });
+        break;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        await page.waitForTimeout(1500);
+      }
+    }
     await expect(page.locator("body")).toBeVisible();
-    // Landing redirects to Employees (AC-2)
     await expect(page).toHaveURL(/\/employees\/?$/, { timeout: 20_000 });
-    // Persistent nav (AC-1)
     await expect(byTestId(page, tid.navEmployees)).toBeVisible();
     await expect(byTestId(page, tid.navEntries)).toBeVisible();
     await expect(byTestId(page, tid.navReport)).toBeVisible();
-    // Employees create opens via modal trigger — not an inline strip (AC-4)
     await expect(byTestId(page, tid.employeesAddOpen)).toBeVisible();
-    // Sticky timer chrome available without scrolling to mid-page block (AC-6)
-    await expect(stickyTimerRoot(page)).toBeVisible({ timeout: 20_000 });
+    await expect(timerChromeRoot(page)).toBeVisible({ timeout: 20_000 });
     await use(page);
+    await clearActiveTimers(request);
   },
 });
 
 export { expect };
 
-/** Expanded panel, collapsed chip, or idle launcher — any sticky timer surface. */
-export function stickyTimerRoot(page: Page): Locator {
+/** FAB, panel, or legacy launcher/collapsed — any timer chrome surface. */
+export function timerChromeRoot(page: Page): Locator {
   return page
     .locator(
-      `[data-testid="${tid.timerPanel}"], [data-testid="${tid.timerCollapsed}"], [data-testid="${tid.timerLauncher}"], [data-testid="${tid.timerStartButton}"]`,
+      [
+        `[data-testid="${tid.timerFab}"]`,
+        `[data-testid="${tid.timerPanel}"]`,
+        `[data-testid="${tid.timerLauncher}"]`,
+        `[data-testid="${tid.timerCollapsed}"]`,
+        `[data-testid="${tid.timerStartButton}"]`,
+      ].join(", "),
     )
     .first();
+}
+
+/** @deprecated alias — prefer timerChromeRoot (FAB era). */
+export function stickyTimerRoot(page: Page): Locator {
+  return timerChromeRoot(page);
 }
 
 export async function gotoEmployees(page: Page): Promise<void> {
@@ -112,21 +212,73 @@ export async function gotoReport(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/report\/?$/);
 }
 
-/** Ensure Start form controls are visible (expand launcher / restore if needed). */
+/** Open FAB panel so Start / running controls are visible (AC-2). */
 export async function ensureTimerExpanded(page: Page): Promise<void> {
   if (await byTestId(page, tid.timerStartButton).isVisible().catch(() => false)) {
     return;
   }
-  const launcher = byTestId(page, tid.timerLauncher);
-  if (await launcher.isVisible().catch(() => false)) {
-    await launcher.click();
+  if (await byTestId(page, tid.timerStopButton).isVisible().catch(() => false)) {
+    return;
   }
-  const restore = byTestId(page, tid.timerRestoreButton);
-  if (await restore.isVisible().catch(() => false)) {
-    await restore.click();
+  const fab = byTestId(page, tid.timerFab);
+  if (await fab.isVisible().catch(() => false)) {
+    await fab.click();
+  } else {
+    const launcher = byTestId(page, tid.timerLauncher);
+    if (await launcher.isVisible().catch(() => false)) {
+      await launcher.click();
+    }
+    const restore = byTestId(page, tid.timerRestoreButton);
+    if (await restore.isVisible().catch(() => false)) {
+      await restore.click();
+    }
   }
-  await expect(byTestId(page, tid.timerStartButton)).toBeVisible({
-    timeout: 10_000,
+  await expect(
+    page.locator(
+      `[data-testid="${tid.timerStartButton}"], [data-testid="${tid.timerStopButton}"]`,
+    ).first(),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+/** Prefer period-* testids; fall back to week-* aliases. */
+export async function clickPeriodPrev(page: Page): Promise<void> {
+  const modern = byTestId(page, tid.entriesPeriodPrev);
+  if (await modern.isVisible().catch(() => false)) {
+    await modern.click();
+    return;
+  }
+  await byTestId(page, tid.entriesWeekPrev).click({ force: true });
+}
+
+export async function clickPeriodNext(page: Page): Promise<void> {
+  const modern = byTestId(page, tid.entriesPeriodNext);
+  if (await modern.isVisible().catch(() => false)) {
+    await modern.click();
+    return;
+  }
+  await byTestId(page, tid.entriesWeekNext).click({ force: true });
+}
+
+export async function clickPeriodToday(page: Page): Promise<void> {
+  const modern = byTestId(page, tid.entriesPeriodToday);
+  if (await modern.isVisible().catch(() => false)) {
+    await modern.click();
+    return;
+  }
+  await byTestId(page, tid.entriesWeekCurrent).click({ force: true });
+}
+
+/** Stop running timer and wait until elapsed chrome is gone (avoids race with query invalidation). */
+export async function stopTimerUi(page: Page): Promise<void> {
+  await ensureTimerExpanded(page);
+  const stop = byTestId(page, tid.timerStopButton);
+  await expect(stop).toBeVisible({ timeout: 10_000 });
+  await stop.click();
+  await expect(byTestId(page, tid.timerElapsed)).toHaveCount(0, {
+    timeout: 15_000,
+  });
+  await expect(byTestId(page, tid.timerFabBadge)).toHaveCount(0, {
+    timeout: 5_000,
   });
 }
 
@@ -134,7 +286,6 @@ export async function createEmployeeUi(
   page: Page,
   name: string,
 ): Promise<void> {
-  // Create only via Dialog (AC-4) — never rely on inline strip
   if (!(await byTestId(page, tid.employeesAddOpen).isVisible().catch(() => false))) {
     await gotoEmployees(page);
   }
@@ -142,11 +293,50 @@ export async function createEmployeeUi(
   const dialog = byTestId(page, tid.employeesCreateDialog);
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   await byTestId(page, tid.employeesNameInput).fill(name);
+  const createResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes("/employees") &&
+      r.request().method() === "POST" &&
+      !r.url().includes("/stats"),
+    { timeout: 15_000 },
+  );
   await byTestId(page, tid.employeesAddButton).click();
+  const res = await createResponse;
+  if (!res.ok()) {
+    throw new Error(`POST /employees failed: ${res.status()} ${await res.text()}`);
+  }
   await expect(dialog).toHaveCount(0, { timeout: 15_000 });
-  await expect(byTestId(page, tid.employeesList)).toContainText(name, {
-    timeout: 15_000,
-  });
+
+  // Ensure people tab + fresh list (FE may still be on Departments or a stale page).
+  await gotoEmployees(page);
+  const peopleTab = byTestId(page, tid.employeesTabPeople);
+  if (await peopleTab.isVisible().catch(() => false)) {
+    await peopleTab.click();
+  }
+  const list = byTestId(page, tid.employeesList);
+  const findOnPages = async (): Promise<boolean> => {
+    if ((await list.innerText()).includes(name)) return true;
+    const pagination = byTestId(page, tid.employeesPagination);
+    if ((await pagination.count()) === 0) return false;
+    for (let i = 0; i < 40; i += 1) {
+      const prev = byTestId(page, tid.employeesPaginationPrev);
+      if ((await prev.count()) === 0 || (await prev.isDisabled().catch(() => true))) {
+        break;
+      }
+      await prev.click();
+    }
+    for (let i = 0; i < 40; i += 1) {
+      if ((await list.innerText()).includes(name)) return true;
+      const next = byTestId(page, tid.employeesPaginationNext);
+      if ((await next.count()) === 0 || (await next.isDisabled().catch(() => true))) {
+        break;
+      }
+      await next.click();
+    }
+    return (await list.innerText()).includes(name);
+  };
+  await expect.poll(findOnPages, { timeout: 30_000, intervals: [400, 800, 1200] }).toBe(true);
+  await expect(list).toContainText(name, { timeout: 5_000 });
 }
 
 export async function selectEmployeeForTimer(
@@ -155,12 +345,21 @@ export async function selectEmployeeForTimer(
 ): Promise<void> {
   await ensureTimerExpanded(page);
   const select = byTestId(page, tid.timerEmployeeSelect);
+  await expect(select).toBeEnabled({ timeout: 15_000 });
   const tag = await select.evaluate((el) => el.tagName.toLowerCase());
   if (tag === "select") {
+    await expect
+      .poll(async () => {
+        const labels = await select.locator("option").allTextContents();
+        return labels.some((l) => l.trim() === name);
+      }, { timeout: 15_000 })
+      .toBe(true);
     await select.selectOption({ label: name });
   } else {
     await select.click();
-    await page.getByRole("option", { name, exact: true }).click();
+    const option = page.getByRole("option", { name, exact: true });
+    await expect(option).toBeVisible({ timeout: 15_000 });
+    await option.click();
   }
 }
 
@@ -187,8 +386,44 @@ export async function setReportPeriod(
   }
   await byTestId(page, tid.reportFrom).fill(from);
   await byTestId(page, tid.reportTo).fill(to);
-  const apply = page.getByRole("button", { name: /показать|show/i });
+  const applyById = byTestId(page, tid.reportApply);
+  if (await applyById.count()) {
+    await applyById.click();
+    return;
+  }
+  const apply = page.getByRole("button", {
+    name: /показать|show|apply|применить/i,
+  });
   if (await apply.count()) {
     await apply.click();
+  }
+}
+
+/** Collect option labels from a native <select> or listbox trigger. */
+export async function collectSelectLabels(
+  page: Page,
+  selectTestId: string,
+): Promise<string[]> {
+  const select = byTestId(page, selectTestId);
+  await expect(select).toBeVisible({ timeout: 10_000 });
+  const tag = await select.evaluate((el) => el.tagName.toLowerCase());
+  if (tag === "select") {
+    return select.locator("option").allTextContents();
+  }
+  await select.click();
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeVisible({ timeout: 5_000 });
+  const labels = await options.allTextContents();
+  await page.keyboard.press("Escape");
+  return labels;
+}
+
+export function assertNoUuidLabels(labels: string[]): void {
+  const trimmed = labels.map((l) => l.trim()).filter(Boolean);
+  for (const label of trimmed) {
+    // Allow "All employees" / empty placeholder — reject pure UUID labels
+    if (UUID_LABEL_RE.test(label)) {
+      throw new Error(`UUID used as select label: ${label}`);
+    }
   }
 }

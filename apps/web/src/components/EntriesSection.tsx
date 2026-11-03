@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,19 +27,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ApiError,
-  api,
-  queryKeys,
-  type TimeEntry,
-} from "@/lib/api";
+import { ApiError, api, queryKeys, type TimeEntry } from "@/lib/api";
 import {
   addDays,
+  formatDayPeriodLabel,
   formatDuration,
   formatInterval,
   formatWeekPeriodLabel,
   fromDatetimeLocalValue,
   localIsoDateFromTimestamp,
+  snapMinutes,
   startOfIsoWeek,
   toDatetimeLocalValue,
   toIsoDate,
@@ -47,6 +45,28 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "list" | "calendar";
+type CalendarMode = "week" | "day";
+
+const HOUR_HEIGHT = 48;
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
+const HOURS = Array.from(
+  { length: DAY_END_HOUR - DAY_START_HOUR },
+  (_, i) => DAY_START_HOUR + i,
+);
+const GRID_HEIGHT = HOURS.length * HOUR_HEIGHT;
+
+function minutesFromMidnight(d: Date): number {
+  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+}
+
+function yToDate(day: Date, clientY: number, top: number): Date {
+  const ratio = Math.max(0, Math.min(1, (clientY - top) / GRID_HEIGHT));
+  const totalMinutes = ratio * (HOURS.length * 60);
+  const result = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  result.setMinutes(Math.round(totalMinutes));
+  return snapMinutes(result, 15);
+}
 
 export function EntriesSection() {
   const { t, locale } = useI18n();
@@ -54,7 +74,26 @@ export function EntriesSection() {
   const intlLocale = locale === "ru" ? "ru-RU" : "en-US";
 
   const [view, setView] = useState<ViewMode>("list");
-  const [weekStart, setWeekStart] = useState(() => startOfIsoWeek());
+  const [calMode, setCalMode] = useState<CalendarMode>("week");
+  const [anchorDate, setAnchorDate] = useState(() => new Date());
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const [filterEmployeeId, setFilterEmployeeId] = useState("all");
+  const [filterFrom, setFilterFrom] = useState(() =>
+    toIsoDate(startOfIsoWeek()),
+  );
+  const [filterTo, setFilterTo] = useState(() =>
+    toIsoDate(addDays(startOfIsoWeek(), 6)),
+  );
+  const [filterQ, setFilterQ] = useState("");
+  const [applied, setApplied] = useState({
+    employeeId: "all",
+    from: toIsoDate(startOfIsoWeek()),
+    to: toIsoDate(addDays(startOfIsoWeek(), 6)),
+    q: "",
+  });
+
   const [createOpen, setCreateOpen] = useState(false);
   const [createEmployeeId, setCreateEmployeeId] = useState("");
   const [createDescription, setCreateDescription] = useState("");
@@ -69,43 +108,87 @@ export function EntriesSection() {
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
 
-  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
-  const from = toIsoDate(weekStart);
-  const to = toIsoDate(weekEnd);
-  const periodLabel = formatWeekPeriodLabel(weekStart, intlLocale);
+  const dragRef = useRef<{
+    day: Date;
+    startY: number;
+    currentY: number;
+    top: number;
+  } | null>(null);
+  const [dragOverlay, setDragOverlay] = useState<{
+    dayKey: string;
+    top: number;
+    height: number;
+  } | null>(null);
 
+  const weekStart = useMemo(
+    () => startOfIsoWeek(anchorDate),
+    [anchorDate],
+  );
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
   );
+  const visibleDays = calMode === "week" ? weekDays : [anchorDate];
+
+  const calFrom = toIsoDate(visibleDays[0]);
+  const calTo = toIsoDate(visibleDays[visibleDays.length - 1]);
+  const periodLabel =
+    calMode === "week"
+      ? formatWeekPeriodLabel(weekStart, intlLocale)
+      : formatDayPeriodLabel(anchorDate, intlLocale);
 
   const employeesQuery = useQuery({
-    queryKey: queryKeys.employees,
-    queryFn: api.listEmployees,
+    queryKey: queryKeys.employeesAll,
+    queryFn: api.listAllEmployees,
   });
   const employees = employeesQuery.data ?? [];
 
-  const entriesQuery = useQuery({
-    queryKey: queryKeys.timeEntries(from, to),
-    queryFn: () => api.listTimeEntries(from, to),
+  const listQuery = useQuery({
+    queryKey: queryKeys.timeEntries({
+      view: "list",
+      from: applied.from,
+      to: applied.to,
+      employeeId: applied.employeeId,
+      q: applied.q,
+      page,
+      limit: pageSize,
+    }),
+    queryFn: () =>
+      api.listTimeEntries({
+        from: applied.from,
+        to: applied.to,
+        employeeId:
+          applied.employeeId === "all" ? undefined : applied.employeeId,
+        q: applied.q || undefined,
+        page,
+        limit: pageSize,
+      }),
+    enabled: view === "list",
   });
-  const entries = entriesQuery.data ?? [];
-  const isEmpty = !entriesQuery.isLoading && entries.length === 0;
 
-  const entriesByDay = useMemo(() => {
-    const map = new Map<string, TimeEntry[]>();
-    for (const day of weekDays) {
-      map.set(toIsoDate(day), []);
-    }
-    for (const entry of entries) {
-      const key = localIsoDateFromTimestamp(entry.start);
-      const bucket = map.get(key);
-      if (bucket) {
-        bucket.push(entry);
-      }
-    }
-    return map;
-  }, [entries, weekDays]);
+  const calQuery = useQuery({
+    queryKey: queryKeys.timeEntries({
+      view: "calendar",
+      from: calFrom,
+      to: calTo,
+      employeeId: applied.employeeId,
+      q: applied.q,
+    }),
+    queryFn: () =>
+      api.listTimeEntriesRange(calFrom, calTo, {
+        employeeId:
+          applied.employeeId === "all" ? undefined : applied.employeeId,
+        q: applied.q || undefined,
+      }),
+    enabled: view === "calendar",
+  });
+
+  const listEntries = listQuery.data?.items ?? [];
+  const listTotal = listQuery.data?.total ?? 0;
+  const calEntries = calQuery.data ?? [];
+  const listEmpty = view === "list" && !listQuery.isLoading && listTotal === 0;
+  const calEmpty =
+    view === "calendar" && !calQuery.isLoading && calEntries.length === 0;
 
   async function invalidateEntries() {
     await Promise.all([
@@ -177,13 +260,54 @@ export function EntriesSection() {
     },
   });
 
-  function openCreate() {
+  function applyFilters() {
+    setApplied({
+      employeeId: filterEmployeeId,
+      from: filterFrom,
+      to: filterTo,
+      q: filterQ.trim(),
+    });
+    setPage(1);
+  }
+
+  function clearFilters() {
+    const from = toIsoDate(startOfIsoWeek());
+    const to = toIsoDate(addDays(startOfIsoWeek(), 6));
+    setFilterEmployeeId("all");
+    setFilterFrom(from);
+    setFilterTo(to);
+    setFilterQ("");
+    setApplied({ employeeId: "all", from, to, q: "" });
+    setPage(1);
+  }
+
+  function syncPeriodFromCalendar() {
+    setFilterFrom(calFrom);
+    setFilterTo(calTo);
+    setApplied((prev) => ({ ...prev, from: calFrom, to: calTo }));
+  }
+
+  function shiftPeriod(dir: -1 | 1) {
+    if (calMode === "week") {
+      setAnchorDate((d) => addDays(startOfIsoWeek(d), dir * 7));
+    } else {
+      setAnchorDate((d) => addDays(d, dir));
+    }
+  }
+
+  function goToday() {
+    setAnchorDate(new Date());
+  }
+
+  function openCreate(prefill?: { start: Date; stop: Date }) {
     const now = new Date();
     const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const start = prefill?.start ?? hourAgo;
+    const stop = prefill?.stop ?? now;
     setCreateEmployeeId(employees[0]?.id ?? "");
     setCreateDescription("");
-    setCreateStart(toDatetimeLocalValue(hourAgo.toISOString()));
-    setCreateStop(toDatetimeLocalValue(now.toISOString()));
+    setCreateStart(toDatetimeLocalValue(start.toISOString()));
+    setCreateStop(toDatetimeLocalValue(stop.toISOString()));
     setCreateError(null);
     setCreateOpen(true);
   }
@@ -214,25 +338,116 @@ export function EntriesSection() {
     setEditError(null);
   }
 
+  const onGridPointerDown = useCallback(
+    (day: Date, e: React.PointerEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest("[data-entry-block]")) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      dragRef.current = {
+        day,
+        startY: e.clientY,
+        currentY: e.clientY,
+        top: rect.top,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const y1 = e.clientY - rect.top;
+      setDragOverlay({
+        dayKey: toIsoDate(day),
+        top: y1,
+        height: 4,
+      });
+    },
+    [],
+  );
+
+  const onGridPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      drag.currentY = e.clientY;
+      const a = drag.startY - drag.top;
+      const b = drag.currentY - drag.top;
+      const top = Math.max(0, Math.min(a, b));
+      const height = Math.max(4, Math.abs(a - b));
+      setDragOverlay({
+        dayKey: toIsoDate(drag.day),
+        top,
+        height,
+      });
+    },
+    [],
+  );
+
+  const onGridPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      setDragOverlay(null);
+      if (!drag) return;
+      const start = yToDate(
+        drag.day,
+        Math.min(drag.startY, drag.currentY),
+        drag.top,
+      );
+      let end = yToDate(
+        drag.day,
+        Math.max(drag.startY, drag.currentY),
+        drag.top,
+      );
+      if (end.getTime() <= start.getTime()) {
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+      }
+      // Tiny click without drag → 1h slot
+      if (Math.abs(drag.currentY - drag.startY) < 8) {
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+      }
+      openCreate({ start, stop: end });
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [employees],
+  );
+
+  function blockStyle(entry: TimeEntry, day: Date): React.CSSProperties {
+    const start = new Date(entry.start);
+    const end = entry.stop
+      ? new Date(entry.stop)
+      : new Date(Date.now());
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const clippedStart = start < dayStart ? dayStart : start;
+    const clippedEnd = end > dayEnd ? dayEnd : end;
+    const top =
+      ((minutesFromMidnight(clippedStart) - DAY_START_HOUR * 60) / 60) *
+      HOUR_HEIGHT;
+    const height = Math.max(
+      16,
+      ((clippedEnd.getTime() - clippedStart.getTime()) / 3_600_000) *
+        HOUR_HEIGHT,
+    );
+    return { top, height };
+  }
+
   return (
     <section
       id="entries"
       aria-labelledby="entries-heading"
-      className="flex flex-col gap-4"
+      className="flex w-full flex-col gap-4"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 id="entries-heading" className="text-xl font-semibold">
           {t("entries.title")}
         </h1>
-        {view === "list" ? (
-          <Button
-            type="button"
-            data-testid="entries-add-open"
-            onClick={openCreate}
-          >
-            {t("entries.addOpen")}
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          data-testid="entries-add-open"
+          onClick={() => openCreate()}
+        >
+          {t("entries.addOpen")}
+        </Button>
       </div>
 
       <div
@@ -256,129 +471,279 @@ export function EntriesSection() {
           variant={view === "calendar" ? "default" : "outline"}
           data-testid="entries-view-calendar"
           aria-pressed={view === "calendar"}
-          onClick={() => setView("calendar")}
+          onClick={() => {
+            setView("calendar");
+            syncPeriodFromCalendar();
+          }}
         >
           {t("entries.view.calendar")}
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          data-testid="entries-week-prev"
-          onClick={() => setWeekStart((d) => addDays(d, -7))}
-        >
-          {t("entries.week.prev")}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          data-testid="entries-week-current"
-          onClick={() => setWeekStart(startOfIsoWeek())}
-        >
-          {t("entries.week.current")}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          data-testid="entries-week-next"
-          onClick={() => setWeekStart((d) => addDays(d, 7))}
-        >
-          {t("entries.week.next")}
-        </Button>
-        <p
-          data-testid="entries-period-label"
-          className="text-sm text-muted-foreground"
-          aria-label={t("entries.periodLabel")}
-        >
-          {periodLabel}
-        </p>
-      </div>
-
-      {view === "list" ? (
-        <div data-testid="entries-list" className="overflow-x-auto rounded-lg border">
-          {isEmpty ? (
-            <p
-              data-testid="entries-empty"
-              className="px-4 py-8 text-center text-muted-foreground"
+      {view === "calendar" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex gap-1"
+            role="group"
+            aria-label={t("entries.mode.aria")}
+          >
+            <Button
+              type="button"
+              size="sm"
+              variant={calMode === "week" ? "default" : "outline"}
+              data-testid="entries-mode-week"
+              aria-pressed={calMode === "week"}
+              onClick={() => setCalMode("week")}
             >
-              {t("entries.empty")}
-            </p>
-          ) : (
-            <table className="w-full min-w-[40rem] text-left text-sm">
-              <thead className="border-b bg-muted/40">
-                <tr>
-                  <th className="px-3 py-2 font-medium">
-                    {t("report.columns.employee")}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t("report.columns.description")}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t("report.columns.interval")}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t("report.columns.duration")}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t("report.columns.actions")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    data-testid={`entry-row-${entry.id}`}
-                    className="border-b last:border-0"
-                  >
-                    <td className="px-3 py-2">
-                      {entry.employeeName ?? entry.employeeId}
-                    </td>
-                    <td className="px-3 py-2">{entry.description}</td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {formatInterval(entry.start, entry.stop, intlLocale)}
-                    </td>
-                    <td className="px-3 py-2 font-mono tabular-nums">
-                      {entry.stop == null
-                        ? t("entries.running")
-                        : formatDuration(entry.durationSeconds ?? 0)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEdit(entry)}
-                        >
-                          {t("entries.edit")}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteEntry(entry)}
-                        >
-                          {t("entries.delete")}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              {t("entries.mode.week")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={calMode === "day" ? "default" : "outline"}
+              data-testid="entries-mode-day"
+              aria-pressed={calMode === "day"}
+              onClick={() => setCalMode("day")}
+            >
+              {t("entries.mode.day")}
+            </Button>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="entries-period-prev"
+            aria-label={t("entries.period.prev")}
+            onClick={() => shiftPeriod(-1)}
+          >
+            ←
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="entries-period-today"
+            onClick={goToday}
+          >
+            {t("entries.period.today")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="entries-period-next"
+            aria-label={t("entries.period.next")}
+            onClick={() => shiftPeriod(1)}
+          >
+            →
+          </Button>
+          {/* Legacy aliases for older E2E helpers */}
+          <span className="sr-only">
+            <button
+              type="button"
+              data-testid="entries-week-prev"
+              onClick={() => shiftPeriod(-1)}
+            />
+            <button
+              type="button"
+              data-testid="entries-week-next"
+              onClick={() => shiftPeriod(1)}
+            />
+            <button
+              type="button"
+              data-testid="entries-week-current"
+              onClick={goToday}
+            />
+          </span>
+          <p
+            data-testid="entries-period-label"
+            className="text-sm text-muted-foreground"
+          >
+            {periodLabel}
+          </p>
         </div>
       ) : null}
 
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
+        <div className="flex min-w-[10rem] flex-col gap-1.5">
+          <Label>{t("entries.filter.employee")}</Label>
+          <Select
+            value={filterEmployeeId}
+            onValueChange={(v) => setFilterEmployeeId(v ?? "all")}
+          >
+            <SelectTrigger
+              data-testid="entries-filter-employee"
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {t("entries.filter.employeeAll")}
+              </SelectItem>
+              {employees.map((emp) => (
+                <SelectItem key={emp.id} value={emp.id}>
+                  {emp.name || t("employees.unnamed")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {view === "list" ? (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="entries-filter-from">
+                {t("entries.filter.from")}
+              </Label>
+              <Input
+                id="entries-filter-from"
+                type="date"
+                data-testid="entries-filter-from"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="entries-filter-to">
+                {t("entries.filter.to")}
+              </Label>
+              <Input
+                id="entries-filter-to"
+                type="date"
+                data-testid="entries-filter-to"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+              />
+            </div>
+          </>
+        ) : null}
+        <div className="flex min-w-[12rem] flex-1 flex-col gap-1.5">
+          <Label htmlFor="entries-filter-q">{t("entries.filter.q")}</Label>
+          <Input
+            id="entries-filter-q"
+            data-testid="entries-filter-q"
+            value={filterQ}
+            onChange={(e) => setFilterQ(e.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          data-testid="entries-filter-apply"
+          onClick={applyFilters}
+        >
+          {t("entries.filter.apply")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          data-testid="entries-filter-clear"
+          onClick={clearFilters}
+        >
+          {t("entries.filter.clear")}
+        </Button>
+      </div>
+
+      {view === "list" ? (
+        <>
+          <div
+            data-testid="entries-list"
+            className="overflow-x-auto rounded-lg border"
+          >
+            {listEmpty ? (
+              <p
+                data-testid="entries-empty"
+                className="px-4 py-8 text-center text-muted-foreground"
+              >
+                {t("entries.empty")}
+              </p>
+            ) : (
+              <table className="w-full min-w-[40rem] text-left text-sm">
+                <thead className="border-b bg-muted/40">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">
+                      {t("report.columns.employee")}
+                    </th>
+                    <th className="px-3 py-2 font-medium">
+                      {t("report.columns.description")}
+                    </th>
+                    <th className="px-3 py-2 font-medium">
+                      {t("report.columns.interval")}
+                    </th>
+                    <th className="px-3 py-2 font-medium">
+                      {t("report.columns.duration")}
+                    </th>
+                    <th className="px-3 py-2 font-medium">
+                      {t("report.columns.actions")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listEntries.map((entry) => (
+                    <tr
+                      key={entry.id}
+                      data-testid={`entry-row-${entry.id}`}
+                      className="border-b last:border-0"
+                    >
+                      <td className="px-3 py-2">
+                        {entry.employeeName ??
+                          employees.find((e) => e.id === entry.employeeId)
+                            ?.name ??
+                          t("employees.unnamed")}
+                      </td>
+                      <td className="px-3 py-2">{entry.description}</td>
+                      <td
+                        className="whitespace-pre-line px-3 py-2 text-muted-foreground"
+                        data-testid={`entry-interval-${entry.id}`}
+                      >
+                        {formatInterval(entry.start, entry.stop, locale)}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {entry.stop == null
+                          ? t("entries.running")
+                          : formatDuration(entry.durationSeconds ?? 0, locale)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEdit(entry)}
+                          >
+                            {t("entries.edit")}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteEntry(entry)}
+                          >
+                            {t("entries.delete")}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <PaginationBar
+            testId="entries-pagination"
+            page={page}
+            limit={pageSize}
+            total={listTotal}
+            onPageChange={setPage}
+          />
+        </>
+      ) : null}
+
       {view === "calendar" ? (
-        <div data-testid="entries-calendar" className="flex flex-col gap-3">
-          {isEmpty ? (
+        <div
+          data-testid="entries-calendar"
+          className="flex w-full min-w-0 flex-col gap-2 overflow-x-auto"
+        >
+          {calEmpty ? (
             <p
               data-testid="entries-empty"
               className="rounded-lg border border-dashed px-4 py-6 text-center text-muted-foreground"
@@ -386,49 +751,115 @@ export function EntriesSection() {
               {t("entries.calendar.empty")}
             </p>
           ) : null}
-          <div className="grid min-w-0 grid-cols-7 gap-2 overflow-x-auto">
-            {weekDays.map((day) => {
+          <p className="text-xs text-muted-foreground">
+            {t("entries.dragCreate.hint")}
+          </p>
+          <div
+            className={cn(
+              "grid min-w-0 gap-0 border-t",
+              calMode === "week"
+                ? "grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]"
+                : "grid-cols-[3.5rem_minmax(0,1fr)]",
+            )}
+          >
+            <div className="border-b border-r" />
+            {visibleDays.map((day) => (
+              <div
+                key={toIsoDate(day)}
+                className="border-b border-r px-1 py-2 text-center text-xs font-medium"
+              >
+                <div>
+                  {day.toLocaleDateString(intlLocale, { weekday: "short" })}
+                </div>
+                <div className="text-muted-foreground">{day.getDate()}</div>
+              </div>
+            ))}
+
+            <div
+              data-testid="entries-hour-axis"
+              className="hour-axis relative border-r"
+              style={{ height: GRID_HEIGHT }}
+            >
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  data-hour={hour}
+                  className="absolute right-1 -translate-y-1/2 text-[10px] text-muted-foreground"
+                  style={{ top: (hour - DAY_START_HOUR) * HOUR_HEIGHT }}
+                >
+                  {`${String(hour).padStart(2, "0")}:00`}
+                </div>
+              ))}
+            </div>
+
+            {visibleDays.map((day) => {
               const dayKey = toIsoDate(day);
-              const dayEntries = entriesByDay.get(dayKey) ?? [];
-              const weekday = day.toLocaleDateString(intlLocale, {
-                weekday: "short",
-              });
+              const dayEntries = calEntries.filter(
+                (e) => localIsoDateFromTimestamp(e.start) === dayKey,
+              );
               return (
                 <div
                   key={dayKey}
                   data-day={dayKey}
                   data-testid={`entries-day-${dayKey}`}
-                  className="flex min-h-36 min-w-[5.5rem] flex-col gap-2 rounded-lg border bg-muted/20 p-2"
+                  className="relative touch-none border-r border-b select-none"
+                  style={{ height: GRID_HEIGHT }}
+                  onPointerDown={(e) => onGridPointerDown(day, e)}
+                  onPointerMove={onGridPointerMove}
+                  onPointerUp={onGridPointerUp}
                 >
-                  <div className="border-b pb-1 text-center text-xs font-medium">
-                    <div>{weekday}</div>
-                    <div className="text-muted-foreground">{day.getDate()}</div>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-1 overflow-y-auto">
-                    {dayEntries.map((entry) => (
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="pointer-events-none absolute inset-x-0 border-t border-border/60"
+                      style={{
+                        top: (hour - DAY_START_HOUR) * HOUR_HEIGHT,
+                        height: HOUR_HEIGHT,
+                      }}
+                    />
+                  ))}
+                  {dragOverlay?.dayKey === dayKey ? (
+                    <div
+                      data-testid="entries-drag-select"
+                      className="pointer-events-none absolute inset-x-1 rounded bg-primary/20"
+                      style={{
+                        top: dragOverlay.top,
+                        height: dragOverlay.height,
+                      }}
+                    />
+                  ) : null}
+                  {dayEntries.map((entry) => {
+                    const name =
+                      entry.employeeName ??
+                      employees.find((e) => e.id === entry.employeeId)?.name ??
+                      t("employees.unnamed");
+                    const dur =
+                      entry.stop == null
+                        ? t("entries.running")
+                        : formatDuration(entry.durationSeconds ?? 0, locale);
+                    return (
                       <button
                         key={entry.id}
                         type="button"
-                        title={entry.description}
-                        className={cn(
-                          "rounded-md border bg-background px-1.5 py-1 text-left text-[11px] leading-snug hover:bg-muted",
-                        )}
-                        onClick={() => openEdit(entry)}
+                        data-entry-block
+                        data-testid={`entries-calendar-block-${entry.id}`}
+                        title={`${name} · ${entry.description} · ${dur}`}
+                        className="absolute inset-x-0.5 z-10 overflow-hidden rounded border bg-primary/15 px-1 py-0.5 text-left text-[10px] leading-tight hover:bg-primary/25"
+                        style={blockStyle(entry, day)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEdit(entry);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
                       >
-                        <div className="truncate font-medium">
-                          {entry.employeeName ?? entry.employeeId}
-                        </div>
+                        <div className="truncate font-medium">{name}</div>
                         <div className="truncate text-muted-foreground">
                           {entry.description}
                         </div>
-                        <div className="font-mono tabular-nums">
-                          {entry.stop == null
-                            ? t("entries.running")
-                            : formatDuration(entry.durationSeconds ?? 0)}
-                        </div>
+                        <div className="tabular-nums">{dur}</div>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -460,7 +891,7 @@ export function EntriesSection() {
                   <SelectContent>
                     {employees.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name}
+                        {employee.name || t("employees.unnamed")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -477,7 +908,9 @@ export function EntriesSection() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="entry-create-start">{t("entries.startLabel")}</Label>
+                <Label htmlFor="entry-create-start">
+                  {t("entries.startLabel")}
+                </Label>
                 <Input
                   id="entry-create-start"
                   type="datetime-local"
@@ -487,7 +920,9 @@ export function EntriesSection() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="entry-create-stop">{t("entries.stopLabel")}</Label>
+                <Label htmlFor="entry-create-stop">
+                  {t("entries.stopLabel")}
+                </Label>
                 <Input
                   id="entry-create-stop"
                   type="datetime-local"
@@ -530,6 +965,9 @@ export function EntriesSection() {
               <DialogTitle>{t("entries.edit")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3">
+              <p className="whitespace-pre-line text-sm text-muted-foreground">
+                {formatInterval(editEntry.start, editEntry.stop, locale)}
+              </p>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="entry-edit-description">
                   {t("entries.descriptionLabel")}
@@ -541,7 +979,9 @@ export function EntriesSection() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="entry-edit-start">{t("entries.startLabel")}</Label>
+                <Label htmlFor="entry-edit-start">
+                  {t("entries.startLabel")}
+                </Label>
                 <Input
                   id="entry-edit-start"
                   type="datetime-local"
@@ -575,6 +1015,18 @@ export function EntriesSection() {
               </Button>
               <Button
                 type="button"
+                variant="destructive"
+                data-testid="entries-edit-delete"
+                onClick={() => {
+                  setDeleteEntry(editEntry);
+                  setEditEntry(null);
+                }}
+              >
+                {t("entries.delete")}
+              </Button>
+              <Button
+                type="button"
+                data-testid="entries-edit-save"
                 onClick={() => updateMutation.mutate()}
                 disabled={updateMutation.isPending}
               >
@@ -593,7 +1045,9 @@ export function EntriesSection() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("entries.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("entries.deleteConfirmTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("entries.deleteConfirmBody")}
             </AlertDialogDescription>

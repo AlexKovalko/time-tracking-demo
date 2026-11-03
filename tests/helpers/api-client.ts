@@ -1,6 +1,23 @@
 import { API_BASE_URL } from "./env";
 
-export type Employee = { id: string; name: string };
+export type Employee = {
+  id: string;
+  name: string;
+  departmentId?: string | null;
+  title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  department?: { id: string; name: string } | null;
+};
+
+export type Department = { id: string; name: string };
+
+export type Paginated<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+};
 
 export type TimeEntry = {
   id: string;
@@ -58,7 +75,14 @@ export async function listEmployees(): Promise<Employee[]> {
   if (!res.ok) {
     throw new Error(`GET /employees → ${res.status}`);
   }
-  return parseJson<Employee[]>(res);
+  const body = await parseJson<Employee[] | Paginated<Employee>>(res);
+  if (Array.isArray(body)) {
+    return body;
+  }
+  if (body && Array.isArray((body as Paginated<Employee>).items)) {
+    return (body as Paginated<Employee>).items;
+  }
+  throw new Error("GET /employees: expected array or { items }");
 }
 
 export async function createEmployee(name: string): Promise<{
@@ -201,3 +225,113 @@ export function emptyReportWindow(): { from: string; to: string } {
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+
+/** Paginated employees (AC-13). Accepts array legacy only to fail clearly when unpaged. */
+export async function listEmployeesPage(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<{ status: number; body: Paginated<Employee> | Employee[] | unknown }> {
+  const q = new URLSearchParams();
+  if (params?.page != null) q.set("page", String(params.page));
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  const res = await apiRequest(`/employees${suffix}`);
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function getEmployee(
+  id: string,
+): Promise<{ status: number; body: Employee | unknown }> {
+  const res = await apiRequest(`/employees/${id}`);
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function getEmployeeStats(
+  id: string,
+  from: string,
+  to: string,
+): Promise<{ status: number; body: unknown }> {
+  const res = await apiRequest(
+    `/employees/${id}/stats?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  );
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function listDepartments(): Promise<{
+  status: number;
+  body: Department[] | Paginated<Department> | unknown;
+}> {
+  const res = await apiRequest("/departments");
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function createDepartment(name: string): Promise<{
+  status: number;
+  body: Department | unknown;
+}> {
+  const res = await apiRequest("/departments", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function patchDepartment(
+  id: string,
+  name: string,
+): Promise<{ status: number; body: unknown }> {
+  const res = await apiRequest(`/departments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function deleteDepartment(id: string): Promise<number> {
+  const res = await apiRequest(`/departments/${id}`, { method: "DELETE" });
+  return res.status;
+}
+
+export async function listTimeEntriesPage(params: {
+  from: string;
+  to: string;
+  employeeId?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ status: number; body: unknown }> {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.employeeId) q.set("employeeId", params.employeeId);
+  if (params.q) q.set("q", params.q);
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.limit != null) q.set("limit", String(params.limit));
+  const res = await apiRequest(`/time-entries?${q}`);
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+
+export async function getReportCharts(params: {
+  from: string;
+  to: string;
+  bucket?: "day" | "week";
+  breakdown?: "employees" | "departments";
+}): Promise<{ status: number; body: unknown }> {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.bucket) q.set("bucket", params.bucket);
+  if (params.breakdown) q.set("breakdown", params.breakdown);
+  const res = await apiRequest(`/reports/charts?${q}`);
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body };
+}
+

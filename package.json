@@ -13,8 +13,9 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config tests/e2e/playwright.config.ts --ui",
     "test:structure": "vitest run --config tests/structure/vitest.config.ts",
-    "test:qa": "pnpm run test:structure && pnpm run test:api && pnpm run test:e2e",
-    "playwright:install": "pnpm exec playwright install chromium"
+    "test:qa": "pnpm run test:structure && pnpm run test:unit && pnpm run test:api && pnpm run test:e2e",
+    "playwright:install": "pnpm exec playwright install chromium",
+    "test:unit": "vitest run --config tests/unit/vitest.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

@@ -20,7 +20,14 @@ export class TimeEntriesController {
 
   @Get()
   findAll(@Query() query: ListTimeEntriesQueryDto) {
-    return this.timeEntriesService.findAll(query.from, query.to);
+    return this.timeEntriesService.findAll({
+      from: query.from,
+      to: query.to,
+      employeeId: query.employeeId,
+      q: query.q,
+      page: query.page,
+      limit: query.limit,
+    });
   }
 
   @Post()

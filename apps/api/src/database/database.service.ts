@@ -26,6 +26,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   private migrate(): void {
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL UNIQUE
+      );
+
       CREATE TABLE IF NOT EXISTS employees (
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL
@@ -47,6 +52,29 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS idx_time_entries_start
         ON time_entries(start);
     `);
+
+    this.ensureColumn('employees', 'department_id', 'department_id TEXT');
+    this.ensureColumn('employees', 'title', 'title TEXT');
+    this.ensureColumn('employees', 'email', 'email TEXT');
+    this.ensureColumn('employees', 'phone', 'phone TEXT');
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_employees_department
+        ON employees(department_id);
+    `);
+  }
+
+  private ensureColumn(
+    table: string,
+    column: string,
+    addColumnSql: string,
+  ): void {
+    const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+      name: string;
+    }>;
+    if (!cols.some((c) => c.name === column)) {
+      this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${addColumnSql}`);
+    }
   }
 }
 
