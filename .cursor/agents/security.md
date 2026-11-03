@@ -48,7 +48,7 @@ Never add webhook signature skip flags or bypasses (`no-webhook-signature-skip`)
 
 ## Stuck escalation
 
-If must-fix ↔ eng loops twice without a new signal → `## blocker · security` and stop (see orchestration 2-cycle rule).
+If must-fix ↔ eng loops twice without a new signal → `## blocker · security` and stop (see pipeline 2-cycle rule).
 
 ## agentmemory
 

@@ -33,7 +33,7 @@ Respect existing dashboard design system and rules (`dashboard-entity-lists`, `u
 3. Specify screen hierarchy, key components (lists vs forms), a11y (focus, labels), and motion only if intentional.
 4. Hand off a clear UI contract for `frontend-dev` (what to build, what not to invent), including assimilated sellability tips.
 5. Post a **ui-ux** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close a ui-ux role-stage ticket. Deferred UX polish outside AC → follow-up issues (`no-tech-debt.mdc`).
-6. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
+6. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-pipeline.mdc`.
 
 ## agentmemory
 

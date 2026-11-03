@@ -21,7 +21,7 @@ You may change:
 
 Do **not** edit `apps/api/**`, workers, DB migrations, or webhook handlers. Consume the API contract from `agent.md`; if the contract is missing or wrong, stop and hand back to PM/backend.
 
-Follow `dashboard-i18n`, entity-list/UI skills and rules, `docs-before-code`, `test-coverage`, `verify-after-changes`, `prettier-eslint`, `no-tech-debt`, and orchestration **Shared ownership**.
+Follow `dashboard-i18n`, entity-list/UI skills and rules, `test-coverage`, `verify-after-changes`, `prettier-eslint`, `no-tech-debt`, and pipeline **Shared ownership** (`dev-team-pipeline.mdc`).
 
 ## When invoked
 
@@ -36,7 +36,7 @@ Follow `dashboard-i18n`, entity-list/UI skills and rules, `docs-before-code`, `t
 9. Post a **frontend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC ticket(s) worked / n/a / parent — never invent a role-stage issue).
 10. Do **not** create or close a frontend-dev role-stage GitHub issue (parent + AC children only).
 11. **No silent tech debt:** required `AC-N` work stays here; deferred cleanup → `gh issue create` (label `tech-debt`) and list under `follow_ups` in handoff-meta. See `no-tech-debt.mdc`.
-12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
+12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-pipeline.mdc`.
 
 ## agentmemory
 

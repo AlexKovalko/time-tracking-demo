@@ -49,7 +49,7 @@ Number user-facing acceptance in `product.md` as `AC-1`, `AC-2`, … so QA can m
 7. Do **not** start production code or behavior tests. Do not replace PM's `agent.md` or role cast.
 8. Link or note the GitHub **parent** issue (`#N`) in `product.md` when known; if missing, tell PM/orchestrator to create one before eng starts. Optional `stage_issue:` = AC tickets / n/a / parent — never invent a BA role-stage issue.
 9. Post a role handoff comment on the parent issue when `issue: #N` is in the task (required) with **handoff-meta**. Do **not** create/close a BA role-stage ticket. Deferred product ideas → follow-up issues, not silent backlog only in chat.
-10. **Blockers and clarifications:** as soon as they appear, post a separate issue comment; do not leave them only in chat. Templates in `dev-team-orchestration.mdc`.
+10. **Blockers and clarifications:** as soon as they appear, post a separate issue comment; do not leave them only in chat. Templates in `dev-team-pipeline.mdc`.
 11. Stop so the orchestrator / PM can continue; still mirror open questions to the user in chat.
 
 ## agentmemory

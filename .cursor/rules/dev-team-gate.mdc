@@ -1,0 +1,22 @@
+---
+description: Hard gate for /dev-team — ban soft-start and nested orchestrator outside an authorized run
+alwaysApply: true
+---
+
+# Dev team gate
+
+## When to start the team
+
+- Start the multi-role pipeline **only** when the *current* user message contains exact `/dev-team` (optional task text after it), or when **resuming the same** `/dev-team` stage (user «ок» / «делай» / grill answers).
+- Soft phrasing alone («собери команду», «команда», «feature team», «dev-team», «оркестрируй») must **not** start the team.
+- Without `/dev-team`: work as a **normal single agent**. One explicit role slash (`/backend-dev`, `/qa`, …) is OK. Do **not** invent cast / epic+AC / bug fast-path via team tools.
+
+## Parent orchestrates
+
+- On `/dev-team`, the **parent agent is the orchestrator**: read `.cursor/skills/dev-team/SKILL.md` and `.cursor/rules/dev-team-pipeline.mdc`, then launch **role** Tasks from the PM cast directly.
+- Do **not** spawn `Task(subagent_type: "orchestrator")` as a required hop. Use that subagent only as a rare fallback for a huge resume; if spawned, the prompt **must** include `dev_team_authorized: true` and quote the user `/dev-team` line (orchestrator refuses otherwise).
+- Continuations resume **that** cast/slug only — do not open a new team from soft phrasing.
+
+## Full canon (load on demand)
+
+Pipeline, cast, tickets, handoff-meta, ownership: `.cursor/rules/dev-team-pipeline.mdc` + skill. Tech debt: `no-tech-debt.mdc`.

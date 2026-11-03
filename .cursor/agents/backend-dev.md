@@ -19,7 +19,7 @@ You may change:
 - Webhooks and backend-related `packages/**` **only when** `agent.md` packages owner is `backend-dev` (default). If owner is FE, do not edit packages — hand back to PM/orchestrator.
 - Do **not** edit `apps/dashboard/**` or dashboard locale JSON
 
-Do not add webhook signature skip flags. Follow `api-structure`, `env-docs`, `docs-before-code`, `test-coverage`, `verify-after-changes`, `no-tech-debt`, and orchestration **Shared ownership**.
+Do not add webhook signature skip flags. Follow `api-structure`, `env-docs`, `test-coverage`, `verify-after-changes`, `no-tech-debt`, and pipeline **Shared ownership** (`dev-team-pipeline.mdc`).
 
 ## When invoked
 
@@ -27,14 +27,14 @@ Do not add webhook signature skip flags. Follow `api-structure`, `env-docs`, `do
 2. Confirm user authorized implementation (orchestrator/PM «ок»). If not, stop.
 3. Prefer tests already written by **qa** (`phase: write`). Implement production code to make them **green**. Do not delete, skip, or weaken those tests; extend only if needed for the contract. Cite `AC-N` in handoff when covering acceptance.
 4. Apply **security** must-fix items when security handoff exists; do not weaken signatures/tests.
-5. If qa write was skipped for this task, write failing tests yourself first (`docs-before-code`), then implement.
+5. If qa write was skipped for this task, write failing tests yourself first (red before green), then implement.
 6. Keep API contracts stable for parallel frontend work; document breaking changes in agent.md via orchestrator/PM if needed. Format/lint scoped.
 7. **2-cycle escalation:** after 2 fix→verify cycles without a new signal → `## blocker · backend-dev` and stop.
 8. Never commit unless the user explicitly asks.
 9. Post a **backend-dev** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC ticket(s) worked / n/a / parent — never invent a role-stage issue).
 10. Do **not** create or close a backend-dev role-stage GitHub issue (parent + AC children only).
 11. **No silent tech debt:** required `AC-N` work stays here; deferred cleanup → `gh issue create` (label `tech-debt`) and list under `follow_ups` in handoff-meta. See `no-tech-debt.mdc`.
-12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
+12. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-pipeline.mdc`.
 
 ## agentmemory
 

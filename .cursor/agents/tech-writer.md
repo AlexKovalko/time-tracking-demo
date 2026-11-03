@@ -32,7 +32,7 @@ Do **not** edit `apps/**`, dashboard locale JSON, or landing marketing content. 
 3. Coordinate with devops: they write env changes; you align CODEMAP/report — do not replace devops on secrets.
 4. Post `## tech-writer — <slug>` on **parent** with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close a tech-writer role-stage ticket. Doc debt outside this ticket → follow-up issues, not silent “later” notes.
 5. Blockers/clarifications as separate comments immediately.
-6. When you are the last cast role and acceptance is met, confirm parent close with orchestrator or close per orchestration rules.
+6. When you are the last cast role and acceptance is met, confirm parent close with parent/orchestrator or close per `dev-team-pipeline.mdc`.
 
 ## Does not
 

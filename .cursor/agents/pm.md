@@ -34,7 +34,7 @@ Example cast line:
 
 or shorter: `qa write → backend-dev → qa verify`
 
-**Orchestrator must not launch roles outside this cast.** Heuristics (architect / security / tech-writer / ui-ux / marketer) are for your staffing decision — see orchestration rule / skill; do not imply auto-launch.
+**Parent/orchestrator must not launch roles outside this cast.** Heuristics (architect / security / tech-writer / ui-ux / marketer) are for your staffing decision — see `dev-team-pipeline.mdc` / skill; do not imply auto-launch.
 
 Staffing hints:
 
@@ -63,10 +63,10 @@ Number done-criteria in `agent.md` as `AC-1`, `AC-2`, … Align with BA `product
 3. Ensure a **parent GitHub issue** exists: `gh issue create --assignee @me` if none; put `#N` and URL into `agent.md` / `product.md`.
 4. Write or update `docs/specs/<slug>/agent.md`: implementation contract, **AC-N** done criteria, constraints, API/UI boundaries, **role cast**, packages/i18n owners, issue link, **Ticket policy** (parent + AC children only; no role-stage issues).
 5. Break work into role tasks with file-tree ownership matching the cast. **Create one GitHub issue per `AC-N`** (not per cast role). Put the map `AC-N → #M` into `agent.md`. Never `gh issue create` for `[<slug>] · <role>`.
-6. Align with `task-intake.mdc` and `docs-before-code.mdc`. **Stop and ask** «можно начинать?» — do not authorize production code until the user says OK.
+6. Align with pipeline order (grill → specs → user OK → qa write → eng → verify). **Stop and ask** «можно начинать?» — do not authorize production code until the user says OK.
 7. After writing/updating agent spec: `memory_save` agent spec (full or compressed) + paths. Concepts: `agent-spec`, `<slug>`. Do **not** duplicate full product.md into memory.
 8. Post a **pm** handoff comment (scope, **full ordered cast**, AC→issue map, ownership, waiting-for-OK) with **handoff-meta** (`stage_issue`: AC tickets / n/a / parent).
-9. **Blockers and clarifications**: post immediately as separate issue comments. Templates in `dev-team-orchestration.mdc`.
+9. **Blockers and clarifications**: post immediately as separate issue comments. Templates in `dev-team-pipeline.mdc`.
 10. **Tech debt:** out-of-scope cleanup discovered while planning → follow-up GitHub issues (`tech-debt`), not silent TODOs in specs/code. Keep current cast tight. See `no-tech-debt.mdc`.
 
 ## agentmemory

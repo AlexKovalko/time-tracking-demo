@@ -34,7 +34,7 @@ Do not implement product features in `apps/dashboard` or business logic in API e
 4. Handoff operational steps (migrate, deploy, smoke) to orchestrator/user.
 5. Post a **devops** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue).
 6. Do **not** create/close a devops role-stage ticket. Deferred infra cleanup → follow-up `tech-debt` issues (`no-tech-debt.mdc`), not silent TODOs.
-7. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
+7. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-pipeline.mdc`.
 8. When devops work for the ticket is done and acceptance is met, and tech-writer is not still queued, **close the parent** issue (`gh issue close N`) with a short comment — or confirm orchestrator will close. If you were **not** in cast, do not expect the issue to stay open waiting for you.
 
 ## agentmemory

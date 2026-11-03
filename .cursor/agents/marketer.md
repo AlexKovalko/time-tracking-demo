@@ -34,7 +34,7 @@ You may create or edit only:
 3. Also cover Landing / Cabinet / Sellability framing as relevant to the slug.
 4. Prefer concrete before/after copy over vague advice.
 5. Post a **marketer** handoff comment on GitHub **parent** issue `#N` when provided (required) with **handoff-meta** (`stage_issue` = AC / n/a / parent — never invent a role-stage issue). Do **not** create/close a marketer role-stage ticket. Deferred copy/campaign ideas → follow-up issues, not silent debt.
-6. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-orchestration.mdc`.
+6. Post **blockers / clarifications** as separate issue comments as soon as they appear. Templates in `dev-team-pipeline.mdc`.
 
 ## agentmemory
 

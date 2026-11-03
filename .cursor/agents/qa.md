@@ -17,7 +17,7 @@ You may change:
 - Test files and test helpers at the lightest sufficient layer (`test-coverage`)
 - Minimal production fixes **only** in `phase: verify` when a tiny bug blocks verification — prefer reporting to backend-dev/frontend-dev if the fix is large
 
-Do not implement the feature in `phase: write`. Do not expand product scope. Follow `test-coverage`, `docs-before-code`, `verify-after-changes`, `no-tech-debt` (no skipped/weakened tests to go green).
+Do not implement the feature in `phase: write`. Do not expand product scope. Follow `test-coverage`, red-before-eng (pipeline), `verify-after-changes`, `no-tech-debt` (no skipped/weakened tests to go green).
 
 ## Phases (required)
 
