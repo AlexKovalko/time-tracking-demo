@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CompactBarChart } from "@/components/CompactBarChart";
 import { PieChart } from "@/components/PieChart";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   ApiError,
   api,
@@ -75,6 +66,8 @@ export function ReportSection() {
   const [editStop, setEditStop] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
+  const deleteEntryRef = useRef<TimeEntry | null>(null);
+  deleteEntryRef.current = deleteEntry;
 
   const invalidRange = applied.from > applied.to;
 
@@ -206,17 +199,26 @@ export function ReportSection() {
     },
   });
 
-
   useEffect(() => {
     if (!deleteEntry) return;
-    const id = window.setTimeout(() => {
-      document
-        .querySelector<HTMLElement>('[data-testid="entries-delete-confirm"]')
-        ?.focus();
-    }, 0);
-    return () => window.clearTimeout(id);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const id = deleteEntryRef.current?.id;
+      if (!id) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setDeleteEntry(null);
+      deleteMutation.mutate(id);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [deleteEntry]);
-  // Focus confirm when delete dialog opens (AC-42 Enter)
+
+
+
+
+
+
 
   async function invalidateReport() {
     await Promise.all([
@@ -574,40 +576,39 @@ export function ReportSection() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <Dialog
         open={!!deleteEntry}
         onOpenChange={(open) => {
           if (!open) setDeleteEntry(null);
         }}
       >
-        <AlertDialogContent
+        <DialogContent
           data-testid="entries-delete-dialog"
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            // Confirm delete on Enter (AC-42); close immediately so dialog dismisses
-            e.preventDefault();
-            e.stopPropagation();
-            const id = deleteEntry?.id;
-            if (!id || deleteMutation.isPending) return;
-            setDeleteEntry(null);
-            deleteMutation.mutate(id);
-          }}
+          role="alertdialog"
+          showCloseButton={false}
         >
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("entries.deleteConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("entries.deleteConfirmBody")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("entries.cancel")}</AlertDialogCancel>
+          <DialogHeader>
+            <DialogTitle>{t("entries.deleteConfirmTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("entries.deleteConfirmBody")}
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteEntry(null)}
+            >
+              {t("entries.cancel")}
+            </Button>
             <Button
               type="button"
               variant="destructive"
               data-testid="entries-delete-confirm"
+              autoFocus
               disabled={deleteMutation.isPending}
               onClick={() => {
-                const id = deleteEntry?.id;
+                const id = deleteEntryRef.current?.id ?? deleteEntry?.id;
                 if (!id) return;
                 setDeleteEntry(null);
                 deleteMutation.mutate(id);
@@ -616,9 +617,9 @@ export function ReportSection() {
               <Trash2Icon data-icon="trash" className="size-4" />
               {t("entries.delete")}
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
