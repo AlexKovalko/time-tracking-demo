@@ -584,10 +584,12 @@ export function ReportSection() {
           data-testid="entries-delete-dialog"
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
+            // Confirm delete on Enter (AC-42); close immediately so dialog dismisses
             e.preventDefault();
             e.stopPropagation();
             const id = deleteEntry?.id;
             if (!id || deleteMutation.isPending) return;
+            setDeleteEntry(null);
             deleteMutation.mutate(id);
           }}
         >
@@ -607,6 +609,7 @@ export function ReportSection() {
               onClick={() => {
                 const id = deleteEntry?.id;
                 if (!id) return;
+                setDeleteEntry(null);
                 deleteMutation.mutate(id);
               }}
             >
