@@ -20,10 +20,20 @@ const catalogs: Record<LocaleCode, Record<string, string>> = { ru, en };
 type I18nContextValue = {
   locale: LocaleCode;
   setLocale: (locale: LocaleCode) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
+
+function interpolate(
+  template: string,
+  vars?: Record<string, string | number>,
+): string {
+  if (!vars) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
+    vars[key] != null ? String(vars[key]) : `{{${key}}}`,
+  );
+}
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<LocaleCode>(() => readLocale());
@@ -38,7 +48,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [locale]);
 
   const t = useCallback(
-    (key: string) => catalogs[locale][key] ?? catalogs.en[key] ?? key,
+    (key: string, vars?: Record<string, string | number>) => {
+      const raw = catalogs[locale][key] ?? catalogs.en[key] ?? key;
+      return interpolate(raw, vars);
+    },
     [locale],
   );
 
@@ -53,7 +66,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
   if (!ctx) {
-    throw new Error("useI18n must be used within I18nProvider");
+    throw new Error("useI18n must be within I18nProvider");
   }
   return ctx;
 }
