@@ -1,9 +1,10 @@
 # Agent spec — time-tracking-ui
 
 **Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
-**Slug:** `time-tracking-ui`  
-**Project:** falconai (not Queply)  
-**Remote:** AlexKovalko/time-tracking-demo (was falconai; same issues #1–#16)  
+**Slug (work item):** `time-tracking-ui`  
+**Product slug:** `time-tracking-demo`  
+**Project:** Time Tracking Demo (`time-tracking-demo`)  
+**Remote:** AlexKovalko/time-tracking-demo  
 **Product:** `docs/specs/time-tracking-ui/product.md`  
 **Baseline (non-regression):** `docs/specs/time-tracking/{product,agent,ux}.md` — parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED  
 **Stack:** `docs/STACK.md`  

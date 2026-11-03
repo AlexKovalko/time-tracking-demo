@@ -2,11 +2,11 @@
 
 **Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  
-**Project:** falconai  
+**Project:** Time Tracking Demo (`time-tracking-demo`)  
 **Product:** `docs/specs/time-tracking/product.md`  
 **Sources:** `docs/TZ.md`, `docs/STACK.md`  
 **Depth:** M  
-**Status:** cast complete — final tech-writer docs sync after devops (ports **8081**, volume `falconai_sqlite_data`, pnpm-only); closes parent #1
+**Status:** cast complete — final tech-writer docs sync after devops (ports **8081**, volume `time_tracking_demo_sqlite_data`, pnpm-only); closes parent #1
 
 ## Goal
 
@@ -258,7 +258,7 @@ Mirror of `product.md` — **do not renumber** product ACs. Eng notes in italics
 - `packages/**` under **frontend-dev** only; serialize if BE needs a shared type (prefer OpenAPI/contract in this doc instead)
 - Locale JSON: **frontend-dev only**
 - Serialize edits if both eng roles (or eng + devops) must touch the same Compose/README file
-- Project name in docs/comments for this repo: **falconai**
+- Product / repo: **Time Tracking Demo** (`time-tracking-demo`)
 
 ## Out of scope
 
@@ -266,4 +266,4 @@ Auth/RBAC/SSO; projects/clients/tags/billing; multi-tenant; mobile/offline; **me
 
 ## Next
 
-Cast finished (AC-1…AC-20). Docs aligned with delivered Compose (**8081** / **3000** / `falconai_sqlite_data`) and **pnpm only**. Parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) closed by **tech-writer**. Orchestrator: closeout retro.
+Cast finished (AC-1…AC-20). Docs aligned with delivered Compose (**8081** / **3000** / `time_tracking_demo_sqlite_data`) and **pnpm only**. Parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) closed by **tech-writer**. Orchestrator: closeout retro.

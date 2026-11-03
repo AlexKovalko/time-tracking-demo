@@ -1,4 +1,4 @@
-# CODEMAP — falconai
+# CODEMAP — Time Tracking Demo
 
 Краткая карта репозитория после стадии `time-tracking` (issue [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)). Пакетный менеджер: **pnpm@11.9.0** only.
 
@@ -15,11 +15,11 @@
 
 | Path | Notes |
 | --- | --- |
-| `docker-compose.yml` | Project `name: falconai`. `api` host **3000** (healthcheck `GET /api/employees`); `nginx` host **8081→80** (healthcheck `wget /`). Compose key `sqlite_data` → Docker name **`falconai_sqlite_data`** → `/data/falconai.sqlite` (**AC-11**). `restart: unless-stopped`. |
+| `docker-compose.yml` | Project `name: time-tracking-demo`. `api` host **3000** (healthcheck `GET /api/employees`); `nginx` host **8081→80** (healthcheck `wget /`). Compose key `sqlite_data` → Docker name **`time_tracking_demo_sqlite_data`** → `/data/time-tracking-demo.sqlite` (**AC-11**). `restart: unless-stopped`. |
 | `.env.example` / `docs/env.md` | Env catalog (PORT, SQLITE_PATH, SEED_ON_BOOT, test URLs). |
 | `apps/api/data/*.sqlite` | Local / E2E DB files (not the Compose volume). |
 
-**Port policy:** Compose UI = **8081**. Host **8080** is not falconai (often another stack → 403). Playwright / Vite preview: default helpers **8081**; overflow **8082** via `WEB_BASE_URL`.
+**Port policy:** Compose UI = **8081**. Host **8080** is not this app (often another stack → 403). Playwright / Vite preview: default helpers **8081**; overflow **8082** via `WEB_BASE_URL`.
 
 ## Tests & tooling
 

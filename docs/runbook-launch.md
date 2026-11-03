@@ -1,4 +1,4 @@
-# Runbook — launch (falconai)
+# Runbook — launch (Time Tracking Demo)
 
 Operator notes for demo / QA. Package manager: **pnpm only**.
 
@@ -15,17 +15,17 @@ docker compose up --build
 | http://127.0.0.1:3000/api | API direct |
 | http://127.0.0.1:8081/api/… | API via nginx proxy |
 
-Health: Compose `api` → `GET /api/employees`; `nginx` → `wget` `/`. Volume key `sqlite_data` / Docker name **`falconai_sqlite_data`** → `/data/falconai.sqlite` keeps data across `down`/`up` without `-v` (**AC-11**). Wipe: `docker compose down -v`.
+Health: Compose `api` → `GET /api/employees`; `nginx` → `wget` `/`. Volume key `sqlite_data` / Docker name **`time_tracking_demo_sqlite_data`** → `/data/time-tracking-demo.sqlite` keeps data across `down`/`up` without `-v` (**AC-11**). Wipe: `docker compose down -v`.
 
 Env catalog: [`docs/env.md`](env.md), template [`.env.example`](../.env.example).
 
 ### Ports — do not confuse stacks
 
-| Port | falconai? | Note |
+| Port | this app? | Note |
 | --- | --- | --- |
 | **8081** | Yes (Compose nginx) | Documented default UI; Vite preview / E2E helpers default here too |
 | **8082** | Optional overflow | If 8081 busy — set `WEB_BASE_URL=http://127.0.0.1:8082` |
-| **8080** | No | Frequently another project (e.g. Queply); not falconai |
+| **8080** | No | Frequently another project (other local stacks); not this app |
 | **3000** | Yes (API) | Nest |
 
 Smoke after `up`:

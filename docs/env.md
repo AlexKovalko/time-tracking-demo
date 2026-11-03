@@ -1,4 +1,4 @@
-# Environment variables — falconai
+# Environment variables — Time Tracking Demo
 
 Catalog for local and Docker Compose runs. Placeholders only — see root `.env.example`.
 
@@ -7,7 +7,7 @@ Catalog for local and Docker Compose runs. Placeholders only — see root `.env.
 | Variable | Default | Where used | Notes |
 | --- | --- | --- | --- |
 | `PORT` | `3000` | Nest listen | Compose sets `3000`. |
-| `SQLITE_PATH` | `apps/api/data/falconai.sqlite` (local) | better-sqlite3 file | Compose: `/data/falconai.sqlite` on volume `falconai_sqlite_data` (**AC-11**). |
+| `SQLITE_PATH` | `apps/api/data/time-tracking-demo.sqlite` (local) | better-sqlite3 file | Compose: `/data/time-tracking-demo.sqlite` on volume `time_tracking_demo_sqlite_data` (**AC-11**). |
 | `SEED_ON_BOOT` | `true` (Compose) | Seed on API boot | Set `false` to skip faker seed. Force re-seed: `pnpm --filter api seed -- --force`. |
 
 Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `environment` still pins `PORT` and `SQLITE_PATH` for the container.
@@ -35,7 +35,7 @@ Optional root `.env` is loaded by Compose (`env_file`, not required). Compose `e
 ## Volume / data
 
 - Compose key: `sqlite_data` (in `docker-compose.yml` `volumes:`).
-- Docker volume name: **`falconai_sqlite_data`** (`name: falconai_sqlite_data`) → `/data` in `api` (`SQLITE_PATH=/data/falconai.sqlite`).
+- Docker volume name: **`time_tracking_demo_sqlite_data`** (`name: time_tracking_demo_sqlite_data`) → `/data` in `api` (`SQLITE_PATH=/data/time-tracking-demo.sqlite`).
 - Healthchecks: `api` polls `GET /api/employees`; `nginx` `wget` `/`.
 - Restart / `down` without `-v`: data (employees, entries, running timers) remains (**AC-11**).
 - Wipe demo DB: `docker compose down -v` (destroys the volume) then `docker compose up --build`.

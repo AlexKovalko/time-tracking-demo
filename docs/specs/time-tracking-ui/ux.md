@@ -2,7 +2,7 @@
 
 **Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
 **Slug:** `time-tracking-ui`  
-**Project:** falconai (not Queply)  
+**Project:** Time Tracking Demo (`time-tracking-demo`)  
 **Role:** ui-ux  
 **Stage:** [#9](https://github.com/AlexKovalko/time-tracking-demo/issues/9)  
 **Status:** done — contract for frontend-dev / qa write  
@@ -95,11 +95,11 @@ Reuse existing shadcn/ui + Tailwind (neutral surfaces, destructive for delete). 
 
 | Key | Values | Notes |
 | --- | --- | --- |
-| `falconai.theme` | `light` \| `dark` | unchanged |
-| `falconai.locale` | `ru` \| `en` | unchanged |
-| `falconai.timer.hideConfirmDone` | `true` | unchanged |
-| `falconai.timer.preferCollapsed` | `true` \| omit | unchanged; drives collapsed / mobile chip after Hide |
-| `falconai.entries.view` | `list` \| `calendar` | **optional** polish — default **List** if absent (AC default). Persist = follow-up [#15](https://github.com/AlexKovalko/time-tracking-demo/issues/15), not required for AC |
+| `time-tracking-demo.theme` | `light` \| `dark` | unchanged |
+| `time-tracking-demo.locale` | `ru` \| `en` | unchanged |
+| `time-tracking-demo.timer.hideConfirmDone` | `true` | unchanged |
+| `time-tracking-demo.timer.preferCollapsed` | `true` \| omit | unchanged; drives collapsed / mobile chip after Hide |
+| `time-tracking-demo.entries.view` | `list` \| `calendar` | **optional** polish — default **List** if absent (AC default). Persist = follow-up [#15](https://github.com/AlexKovalko/time-tracking-demo/issues/15), not required for AC |
 
 ## 4. Employees route (AC-4, AC-5)
 

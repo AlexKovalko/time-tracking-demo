@@ -1,4 +1,4 @@
-# falconai web — Vite build (pnpm) + nginx static UI (/api → Nest)
+# Time Tracking Demo web — Vite build (pnpm) + nginx static UI (/api → Nest)
 FROM node:24-bookworm-slim AS build
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 WORKDIR /app

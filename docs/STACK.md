@@ -14,7 +14,7 @@
 | Язык | TypeScript | — |
 | Стили | Tailwind CSS | — |
 | UI-компоненты | shadcn/ui | — |
-| Локальный запуск | Docker Compose | API **:3000** + nginx UI **:8081** (+ volume key `sqlite_data`, Docker name `falconai_sqlite_data`). Не путать с чужим **:8080**. E2E/preview: **:8081** (или **:8082** через `WEB_BASE_URL`) |
+| Локальный запуск | Docker Compose | API **:3000** + nginx UI **:8081** (+ volume key `sqlite_data`, Docker name `time_tracking_demo_sqlite_data`). Не путать с чужим **:8080**. E2E/preview: **:8081** (или **:8082** через `WEB_BASE_URL`) |
 
 ## Кратко по слоям
 

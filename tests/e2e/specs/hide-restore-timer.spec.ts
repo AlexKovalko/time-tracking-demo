@@ -17,8 +17,8 @@ test.describe("AC-7 · hide / restore / stop while collapsed", () => {
     openApp: page,
   }) => {
     await page.evaluate(() => {
-      localStorage.removeItem("falconai.timer.hideConfirmDone");
-      localStorage.removeItem("falconai.timer.preferCollapsed");
+      localStorage.removeItem("time-tracking-demo.timer.hideConfirmDone");
+      localStorage.removeItem("time-tracking-demo.timer.preferCollapsed");
     });
     await page.reload();
     await expect(byTestId(page, tid.employeesAddOpen)).toBeVisible({

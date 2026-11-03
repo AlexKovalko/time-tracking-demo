@@ -1,4 +1,4 @@
-# falconai API — NestJS + SQLite (pnpm / Corepack only — never npm)
+# Time Tracking Demo API — NestJS + SQLite (pnpm / Corepack only — never npm)
 FROM node:24-bookworm-slim AS deps
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
@@ -22,7 +22,7 @@ RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV SQLITE_PATH=/data/falconai.sqlite
+ENV SQLITE_PATH=/data/time-tracking-demo.sqlite
 COPY --from=deps /app /app
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY apps/api/package.json apps/api/

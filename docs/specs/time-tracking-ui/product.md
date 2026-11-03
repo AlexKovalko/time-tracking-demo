@@ -2,7 +2,7 @@
 
 **Issue:** [#6](https://github.com/AlexKovalko/time-tracking-demo/issues/6)  
 **Slug:** `time-tracking-ui`  
-**Project:** falconai (не Queply)  
+**Project:** Time Tracking Demo (`time-tracking-demo`)  
 **Предшественник:** slug `time-tracking` — parent [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1) CLOSED; спеки `docs/specs/time-tracking/{product,agent,ux}.md`, стек `docs/STACK.md`  
 **UI port:** Compose / preview **:8081** (никогда :8080)  
 **Статус решений:** planning — defaults **locked** ниже (grill не блокирует; portfolio scope)
@@ -23,7 +23,7 @@
 | --- | --- | --- | --- |
 | [Toggl Track](https://support.toggl.com/en-us/article/the-timer-page-x46p31/) | Sidebar nav; **persistent timer bar сверху** страницы Timer | Calendar / List / Timesheet на одной зоне; week/day calendar с hour grid, drag-create | Nav + переключатель Calendar∥List — да. Top bar и timesheet/drag — нет (user: sticky **bottom-right**; timesheet OOS) |
 | Clockify / аналоги | Боковое или верхнее меню разделов; таймер часто в шапке или на отдельной странице Track | List + Calendar; отчёты отдельно | Разделение **Employees / Time / Report** + отдельный report — да |
-| Prior falconai v1 | Нет меню; 3 блока на одной странице; таймер в середине main | Только list в Report | Базовый CRUD/API оставляем; IA и chrome меняем |
+| Prior v1 (`time-tracking`) | Нет меню; 3 блока на одной странице; таймер в середине main | Только list в Report | Базовый CRUD/API оставляем; IA и chrome меняем |
 
 **Рыночный вывод:** зрелые трекеры отделяют **навигацию разделов**, держат **таймер всегда доступным** при смене view, и дают **несколько представлений** одних и тех же entries (list + calendar). Для multi-employee portfolio без проектов/тегов достаточно week-колонок с карточками дней + таблица — без hour-axis и drag-resize как у Toggl.
 

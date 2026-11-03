@@ -2,7 +2,7 @@
 
 **Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  
-**Project:** falconai  
+**Project:** Time Tracking Demo (`time-tracking-demo`)  
 **Role:** ui-ux  
 **Status:** done — contract for frontend-dev  
 **Sources:** `product.md`, `agent.md`, `docs/STACK.md`  
@@ -52,10 +52,10 @@
 
 | Key | Values | Notes |
 | --- | --- | --- |
-| `falconai.theme` | `light` \| `dark` | Default: system or `light` |
-| `falconai.locale` | `ru` \| `en` | Default: `ru` (TZ language) or browser — document choice in README |
-| `falconai.timer.hideConfirmDone` | `true` | After first hide-confirm answered with **Hide** (or End session — see §5); session minimum; prefer persist so reload doesn’t re-prompt |
-| `falconai.timer.preferCollapsed` | `true` \| omit | Optional: after Hide, keep collapsed across reload while that timer still running |
+| `time-tracking-demo.theme` | `light` \| `dark` | Default: system or `light` |
+| `time-tracking-demo.locale` | `ru` \| `en` | Default: `ru` (TZ language) or browser — document choice in README |
+| `time-tracking-demo.timer.hideConfirmDone` | `true` | After first hide-confirm answered with **Hide** (or End session — see §5); session minimum; prefer persist so reload doesn’t re-prompt |
+| `time-tracking-demo.timer.preferCollapsed` | `true` \| omit | Optional: after Hide, keep collapsed across reload while that timer still running |
 
 No API for theme/locale.
 
@@ -144,7 +144,7 @@ No API for theme/locale.
 **First hide (one-time confirm)**
 
 1. User clicks **Hide** while `running-expanded`.
-2. If `falconai.timer.hideConfirmDone !== true` (or in-memory flag equivalent for session): open **AlertDialog** — do **not** collapse yet.
+2. If `time-tracking-demo.timer.hideConfirmDone !== true` (or in-memory flag equivalent for session): open **AlertDialog** — do **not** collapse yet.
 3. Dialog choices (two primary actions + cancel optional):
    - **End session** → run Stop path; close dialog; leave `idle`; set `hideConfirmDone=true` (user already saw the choice — no need to ask again this session / prefer persist).
    - **Hide timer** → close dialog; enter `running-collapsed`; set `hideConfirmDone=true`; optional `preferCollapsed=true`.
@@ -281,7 +281,7 @@ Frontend-dev owns JSON files (e.g. `apps/web/src/locales/ru.json`, `en.json`). N
 
 | Key | RU | EN |
 | --- | --- | --- |
-| `app.title` | Учёт рабочего времени | Time tracking |
+| ``app.title` | Time Tracking Demo | Time Tracking Demo |
 | `app.theme.light` | Светлая тема | Light theme |
 | `app.theme.dark` | Тёмная тема | Dark theme |
 | `app.theme.toggle` | Переключить тему | Toggle theme |

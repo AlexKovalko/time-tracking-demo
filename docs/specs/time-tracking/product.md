@@ -1,4 +1,4 @@
-# Учёт рабочего времени — product intent
+# Time Tracking Demo — product intent (baseline time-tracking)
 
 **Issue:** [#1](https://github.com/AlexKovalko/time-tracking-demo/issues/1)  
 **Slug:** `time-tracking`  

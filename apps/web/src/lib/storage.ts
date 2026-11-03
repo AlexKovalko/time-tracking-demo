@@ -1,8 +1,8 @@
 export const STORAGE_KEYS = {
-  theme: "falconai.theme",
-  locale: "falconai.locale",
-  hideConfirmDone: "falconai.timer.hideConfirmDone",
-  preferCollapsed: "falconai.timer.preferCollapsed",
+  theme: "time-tracking-demo.theme",
+  locale: "time-tracking-demo.locale",
+  hideConfirmDone: "time-tracking-demo.timer.hideConfirmDone",
+  preferCollapsed: "time-tracking-demo.timer.preferCollapsed",
 } as const;
 
 export type ThemeMode = "light" | "dark";

@@ -57,5 +57,5 @@ function resolveSqlitePath(): string {
       ? configured
       : join(process.cwd(), configured);
   }
-  return join(process.cwd(), 'data', 'falconai.sqlite');
+  return join(process.cwd(), 'data', 'time-tracking-demo.sqlite');
 }

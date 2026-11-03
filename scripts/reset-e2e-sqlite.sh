@@ -6,7 +6,7 @@ DATA_DIR="${ROOT}/apps/api/data"
 mkdir -p "${DATA_DIR}"
 # Explicit paths — do not use unquoted *.sqlite* under zsh nomatch.
 rm -f \
-  "${DATA_DIR}/e2e-falconai.sqlite" \
-  "${DATA_DIR}/e2e-falconai.sqlite-wal" \
-  "${DATA_DIR}/e2e-falconai.sqlite-shm"
+  "${DATA_DIR}/e2e-time-tracking-demo.sqlite" \
+  "${DATA_DIR}/e2e-time-tracking-demo.sqlite-wal" \
+  "${DATA_DIR}/e2e-time-tracking-demo.sqlite-shm"
 echo "Cleared e2e SQLite under ${DATA_DIR}"

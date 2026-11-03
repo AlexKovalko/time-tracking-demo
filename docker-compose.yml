@@ -1,7 +1,7 @@
-# falconai — API (NestJS + SQLite volume) + nginx (static React UI, /api proxy).
+# Time Tracking Demo — API (NestJS + SQLite volume) + nginx (static React UI, /api proxy).
 # Host ports: API 3000, UI 8081→80. Keep UI on 8081 — host :8080 is often taken
 # by unrelated nginx (returns 403). E2E: WEB_BASE_URL=http://localhost:8081
-name: falconai
+name: time-tracking-demo
 
 services:
   api:
@@ -16,7 +16,7 @@ services:
     environment:
       PORT: "3000"
       # Persist DB on named volume (AC-11). Override via .env if needed.
-      SQLITE_PATH: /data/falconai.sqlite
+      SQLITE_PATH: /data/time-tracking-demo.sqlite
       SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
     volumes:
       - sqlite_data:/data
@@ -55,4 +55,4 @@ services:
 volumes:
   # Named volume keeps employees + time entries (incl. running) across compose restarts.
   sqlite_data:
-    name: falconai_sqlite_data
+    name: time_tracking_demo_sqlite_data

@@ -1,4 +1,4 @@
-# falconai — учёт рабочего времени
+# Time Tracking Demo
 
 Портфолио-демо: сотрудники, таймер start/stop, отчёт за период и CSV-экспорт. Стек: NestJS + SQLite (`better-sqlite3`), React + TanStack Query + Tailwind + shadcn/ui, Docker Compose (API + nginx). Авторизации нет; данные вымышленные (faker seed).
 
@@ -22,9 +22,9 @@ docker compose up --build
 | --- | --- | --- |
 | `api` | `http://127.0.0.1:3000` | NestJS; префикс `/api` |
 | `nginx` | `http://127.0.0.1:8081` | UI + proxy `/api` → API |
-| volume `sqlite_data` → **`falconai_sqlite_data`** | `/data/falconai.sqlite` в контейнере | персистентность после restart (**AC-11**) |
+| volume `sqlite_data` → **`time_tracking_demo_sqlite_data`** | `/data/time-tracking-demo.sqlite` в контейнере | персистентность после restart (**AC-11**) |
 
-**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте falconai на **8080** — порт часто занят чужим стеком (например Queply) и даёт чужой 403. Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`.
+**Порты UI:** Compose публикует nginx на **8081→80**. Не ожидайте UI на **8080** — порт часто занят другим локальным стеком и даёт чужой 403. Vite preview / Playwright: дефолт helpers — `8081`; если занят — другой порт + явный `WEB_BASE_URL`.
 
 Образы: **только pnpm** (`corepack prepare pnpm@11.9.0`). Native `better-sqlite3`: в API Dockerfile — `python3`/`make`/`g++`; в `pnpm-workspace.yaml` — `onlyBuiltDependencies` / `allowBuilds`. Healthchecks: API (`GET /api/employees`), nginx (`wget` `/`).
 
@@ -55,7 +55,7 @@ pnpm --filter web exec vite preview --host 127.0.0.1 --port 8081
 ```
 
 - API: `http://127.0.0.1:3000/api`
-- SQLite по умолчанию: `apps/api/data/falconai.sqlite`
+- SQLite по умолчанию: `apps/api/data/time-tracking-demo.sqlite`
 - Env: `PORT`, `SQLITE_PATH`, `SEED_ON_BOOT=false` (отключить seed на boot) — см. `docs/env.md`
 Повторный seed (force):
 
@@ -124,7 +124,7 @@ CSV-колонки: `employee,description,start,stop,durationSeconds`.
 ### Где ИИ слабее / что правили вручную
 
 - Стартовый Nest scaffold (`AppController` hello) — заменён на доменные модули
-- Коллизия host **:8080** с чужим nginx (Queply): Compose/docs переведены на **8081**, E2E — явный `WEB_BASE_URL` (часто **8082**)
+- Коллизия host **:8080** с другим nginx на хосте: Compose/docs переведены на **8081**, E2E — явный `WEB_BASE_URL` (часто **8082**)
 - Границы Compose: API volume vs FE nginx — нужна явная сериализация в prompt
 - Правило «только pnpm» — без constraint легко уехать на npm/npx
 - zsh `rm …sqlite*` / NULL_GLOB — вынесен в `scripts/reset-e2e-sqlite.sh` с явными путями
@@ -142,5 +142,5 @@ docs/CODEMAP.md       — карта модулей
 docs/env.md           — каталог env / порты / volume
 docs/runbook-launch.md — операторский запуск / порты
 scripts/              — reset-e2e-sqlite.sh
-docker-compose.yml    — api :3000 + nginx :8081 + falconai_sqlite_data
+docker-compose.yml    — api :3000 + nginx :8081 + time_tracking_demo_sqlite_data
 ```

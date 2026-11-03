@@ -1,8 +1,8 @@
 {
-  "name": "falconai",
+  "name": "time-tracking-demo",
   "private": true,
   "version": "0.0.0",
-  "description": "Employee time-tracking greenfield monorepo (falconai)",
+  "description": "Employee time-tracking greenfield monorepo (Time Tracking Demo)",
   "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=24"
