@@ -1,0 +1,235 @@
+---
+description: Delegate Queply work to custom subagents with PM role cast, shared checkout, AC-N, handoff-meta, and agentmemory handoffs
+alwaysApply: true
+---
+
+# Dev team orchestration
+
+Parent Agent is the **orchestrator** (see also `.cursor/agents/orchestrator.md`). Prefer custom subagents in `.cursor/agents/` for role-shaped work. Do not invent parallel process that skips `task-intake.mdc` / grill / specs / user «ок» before production code.
+
+## Role cast (PM owns staffing)
+
+- **Roster** = catalog of available roles (table below). Not every ticket runs every role.
+- **PM** publishes an ordered **role cast** in `agent.md` + the pm issue handoff: who is in, who is out, parallel marks (`∥`), eng/packages owners.
+- **Orchestrator launches only roles in the cast**, in cast order. Do **not** invent or “add for safety” roles outside the cast (except an explicit **user** override that updates the cast).
+- Heuristics for when to staff architect / security / tech-writer / ui-ux / marketer are **hints for PM**, not auto-launch rules.
+- **Minimum for behavior-change** (unless PM narrowed otherwise): after user OK, the eng roles from cast + `qa` write/verify. BA / architect / ui-ux / marketer / security / devops / tech-writer run only if PM included them.
+- If **security** is in cast: its open blocker holds close. If not in cast: close does not wait for security.
+- If **tech-writer** is in cast: close after its handoff. If not: do not invoke.
+
+## Roster
+
+| Invoke | Role |
+| --- | --- |
+| `/orchestrator` | Parent: execute PM cast only; Task briefs; closeout + retro |
+| `/business-analyst` | Market scan, compare approaches, grill, `product.md`, journeys |
+| `/architect` | Cross-layer design; `architecture.md`; constraints for PM |
+| `/pm` | Scope, `agent.md`, **role cast**, ask «можно начинать?» |
+| `/ui-ux` | Flows, UI contract, a11y; assimilate marketer sellability tips |
+| `/marketer` | Copy + UI-for-sellability tips in docs; not locale JSON / not React |
+| `/backend-dev` | `apps/api`, workers, DB, webhooks; `packages/**` when owner |
+| `/frontend-dev` | `apps/dashboard` + dashboard locale JSON; `packages/**` when owner |
+| `/qa` | Two phases: write failing tests before eng; verify after |
+| `/security` | Threat review; `security.md`; must-fix; no signature-skip |
+| `/devops` | Infra, env docs, deploy wiring |
+| `/tech-writer` | CODEMAP / reports / runbooks / eng docs sync |
+
+## Pipeline (max template; PM selects subset)
+
+Ordered **template** — roles absent from cast are simply skipped:
+
+1. **BA** → grill as needed → `product.md` / journeys
+2. **architect** (if in cast) → `architecture.md` + constraints for PM
+3. **PM** → `agent.md` + **role cast** + per-stage GitHub issues → **stop for user OK**
+4. Optional parallel after product intent (if in cast): **ui-ux** ∥ **marketer**
+5. After «ок / делай»: **qa** with `phase: write` — failing tests from acceptance (`docs-before-code` / red)
+6. **backend-dev** ∥ **frontend-dev** (non-overlapping trees; API contract in `agent.md`) — make QA tests green; do not weaken or delete them
+7. **security** (if in cast) — after eng; before or with verify; blockers hold close
+8. **qa** with `phase: verify` — re-run tests, AC matrix, report gaps
+9. **devops** (if in cast) — infra/env
+10. **tech-writer** (if in cast) — docs sync near closeout
+11. Each finished cast role **closes its stage issue**. **Close the parent GitHub issue** when the feature stage is done: after **qa verify** succeeds, if devops/tech-writer were **not** in cast (or already done), **qa** (or orchestrator) **closes** parent with `gh issue close N`. If devops or tech-writer ran, close parent after their handoff (that role or orchestrator).
+12. Orchestrator merges results, updates specs/memory if scope changed, writes stage report when handing off «готово», posts **closeout retro**; confirms no open stage issues left for the cast
+
+Task prompts for QA **must** include `phase: write` or `phase: verify`.
+
+### Bug fast-path
+
+Clear repro: PM/orchestrator may publish a **short cast** without BA/PM/ui-ux/marketer (typical: `qa write → owner eng → qa verify`; add security/tech-writer only if in cast). Lint/format/commit-only: no full team.
+
+## Shared ownership
+
+One working tree. Enforce ownership in prompts and `agent.md`:
+
+| Zone | Owner rule |
+| --- | --- |
+| `apps/api`, workers, DB, webhooks | `backend-dev` only |
+| `apps/dashboard` | `frontend-dev` only |
+| `packages/**` | **Not** parallel with FE/BE. Owner in `agent.md` (default `backend-dev`; `frontend-dev` only if PM explicitly said dashboard-facing) |
+| Cabinet i18n locale JSON | **`frontend-dev` only**. Marketer writes copy proposals in `docs/specs/<slug>/` (`copy.md` / `marketing.md`) |
+| Landing | Marketer; content in `queply_landing` only when that repo is in the workspace **and** Task explicitly allows |
+| Planning roles (BA/PM/architect/ui-ux/marketer/tech-writer) | **docs/** (+ agreed content) only — policy B |
+
+Marketer ↔ ui-ux: marketer proposes sellability layout tips in docs; ui-ux folds them into the UX contract. **ui-ux veto** only for a11y / design-system conflicts. Disputes on “how to sell” → user/PM.
+
+If two implementers must touch the same files, run **sequentially** or serialize via orchestrator.
+
+## Acceptance IDs (AC-N)
+
+- BA numbers product acceptance in `product.md` as `AC-1`, `AC-2`, …
+- PM mirrors/refines done-criteria in `agent.md` with the same `AC-N` IDs (add eng-only ACs if needed; do not renumber silently)
+- **qa write:** every new/changed test maps to one or more `AC-N`
+- **qa verify:** handoff includes matrix `AC-N → pass | fail | gap`
+- Eng/security must-fix should cite `AC-N` when fixing acceptance gaps
+
+## Handoff-meta
+
+Every role `gh issue comment` handoff **must** end with:
+
+```markdown
+### handoff-meta
+- slug: …
+- issue: #N
+- stage_issue: #M
+- role: …
+- status: done|blocked
+- paths: …
+- commands: …
+- ac_covered: AC-1, …
+- follow_ups: #A, #B   # tech-debt / future issues; omit if none
+- next: …
+```
+
+Omit `commands` / `ac_covered` only when truly N/A (e.g. pure planning with no tests yet); still keep the other fields. Include `stage_issue` whenever a stage task was created.
+
+## Stuck escalation (2-cycle)
+
+After **2** eng↔qa fix→verify cycles **without a new signal** (new failing test insight, new AC clarification, or new repro): post `## blocker · <role> — <slug>`, stop spinning, escalate to user/PM. Do not burn CI/token budget on the same failure.
+
+## Closeout retro
+
+On stage close / «готово», orchestrator posts a short issue comment with **3 bullets**: what broke in (1) handoff, (2) ownership, (3) AC tracing — or «нет» per item. Use `memory_lesson_save` / rule tweak **only** if the pattern repeats across tickets.
+
+## GitHub ticket (required)
+
+Non-trivial team work is tied to a **parent GitHub issue** (number in specs and every Task prompt) plus **per-stage child issues**.
+
+1. **PM** (or orchestrator if PM skipped): ensure the **parent** issue exists — create with `gh issue create --assignee @me` if missing; put `#N` / URL into `product.md` / `agent.md`.
+2. **Stage tasks (required):** after the role cast is published, PM/orchestrator creates **one GitHub issue per cast stage** (qa write and qa verify are separate stages). Title: `[<slug>] · <role-or-phase>`. Body links parent `#N`, lists relevant `AC-N`, and states the owner role. Put stage issue numbers into `agent.md` and every Task prompt as `stage_issue: #M`.
+3. Every delegated Task prompt **must** include `issue: #N` (parent) and `stage_issue: #M` when a stage issue exists.
+4. **Every role that runs** ends by posting a handoff comment on the **parent** issue via `gh issue comment N`. No silent handoff. Include **handoff-meta** (include `stage_issue: #M`).
+5. **Close the stage issue yourself** when that stage’s handoff is `status: done`: `gh issue close M` (the role that finished, or orchestrator if the role could not). Do **not** leave completed stage issues open. Cancel (`gh issue close M --reason "not planned"` or comment + close) only if the stage was removed from cast.
+6. **Blockers and clarifications** also go on the **parent** ticket — not only in chat or memory. Post them as soon as they appear (do not wait for role end).
+7. Orchestrator may add a final summary + **closeout retro** when closing the stage / «готово».
+8. **Who closes the parent issue:** after acceptance is met — **qa** (verify phase) when devops/tech-writer are skipped; otherwise after those cast roles’ handoffs (**devops** / **tech-writer** / **orchestrator**). Close only when all stage issues for the cast are closed (or cancelled). Never leave a done parent ticket open solely because a skipped role was not scheduled.
+
+## Tech debt → follow-up issues (no silent debt)
+
+See also `no-tech-debt.mdc`.
+
+- Do **not** accumulate unpaid tech debt in code (`TODO`/`FIXME`/skipped tests/temporary hacks) without a filed issue.
+- Deferred / out-of-scope cleanup discovered mid-flight → **new GitHub issue** (label `tech-debt` when useful), linked from the role handoff. Do **not** expand the current cast into unbounded cleanup.
+- Work still required for current `AC-N` stays in the current parent ticket — file a follow-up only for true future work.
+- Orchestrator/PM may batch tiny related debt into one follow-up issue; still must be a real issue, not chat-only.
+
+### What must be commented
+
+| Kind | When | Heading prefix |
+| --- | --- | --- |
+| Handoff | End of role work | `## <role> — <slug>` (QA: `## qa write` / `## qa verify`) |
+| Blocker | Work cannot proceed (missing API, env, decision, access) | `## blocker · <role> — <slug>` |
+| Clarification | Need user/PM/other-role answer to continue correctly | `## уточнение · <role> — <slug>` |
+| Closeout retro | Orchestrator at stage end | `## closeout retro — <slug>` |
+
+Chat may mirror the same text; the **issue thread is canonical**. If a blocker/clarification is resolved, post a short follow-up comment (`## resolved · …`) with the decision.
+
+### Handoff template
+
+```bash
+gh issue comment N --body "$(cat <<'EOF'
+## <role> — <slug>
+
+**Сделано:** …
+**Пути:** …
+**Блокеры / вопросы:** … (или «нет»; если есть — отдельный comment уже должен быть)
+**Следующему:** …
+
+### handoff-meta
+- slug: …
+- issue: #N
+- stage_issue: #M
+- role: …
+- status: done|blocked
+- paths: …
+- commands: …
+- ac_covered: …
+- follow_ups: …
+- next: …
+
+EOF
+)"
+```
+
+### Stage issue template
+
+```bash
+gh issue create --assignee @me --title "[<slug>] · <role-or-phase>" --body "$(cat <<'EOF'
+Parent: #N
+Role / stage: <role> (qa: write|verify)
+AC: AC-… (or n/a)
+Done when: handoff posted on #N with status done; then close this issue.
+
+EOF
+)"
+```
+
+### Blocker / clarification template
+
+```bash
+gh issue comment N --body "$(cat <<'EOF'
+## blocker · <role> — <slug>
+# or: ## уточнение · <role> — <slug>
+
+**Суть:** …
+**Почему блокирует / зачем ответ:** …
+**Нужно от:** user | pm | business-analyst | architect | backend-dev | …
+**Предлагаемые варианты:** … (если есть)
+
+EOF
+)"
+```
+
+Roles: `orchestrator`, `business-analyst`, `architect`, `pm`, `ui-ux`, `marketer`, `backend-dev`, `frontend-dev`, `qa`, `security`, `devops`, `tech-writer`.
+
+## Delegation
+
+- Put full context in the Task prompt (slug, **issue #N**, **stage_issue #M**, paths, **AC-***, ownership, constraints, depth S/M/L; for QA also **`phase: write|verify`**; for security optional **`phase: review|fix`**). Subagents do not see this chat. Remind the role to close `#M` on done and to file follow-up issues instead of silent tech debt.
+- Launch independent roles in **one** message (parallel Task calls) **only** when the cast marks `∥`.
+- Resume a subagent for follow-ups when continuity helps.
+- Subagents inherit MCP including **agentmemory** — expect recall at start and `team-handoff` save at end.
+- After each role: confirm the issue comment was posted (URL or comment id in the role return).
+
+## agentmemory
+
+- After `agent.md`: `memory_save` agent spec — concepts `agent-spec`, `<slug>` (PM/orchestrator)
+- BA: brief `product-intent` / `journey` — do not dump full `product.md`
+- Each role: `team-handoff` + role concept (`backend`, `frontend`, `ui-ux`, `qa`, `infra`, `marketing`, `architecture`, `security`, `docs`, …)
+- Include `issue:#N` in handoff content when known
+
+## Anti-patterns
+
+- Launching roles outside the PM role cast (or without updating cast after user override)
+- Starting FE/BE before user OK on a non-trivial feature
+- Starting FE/BE before **qa write** on a non-trivial behavior change (unless user explicitly skips)
+- Parallel FE+BE without a written API/UI contract
+- Parallel FE/BE edits to the same `packages/**` tree
+- Marketer editing dashboard locale JSON or React
+- Using marketer/ui-ux to bypass product grill
+- Orchestrator re-implementing everything instead of delegating large role-shaped chunks
+- Finishing a role without an issue comment / without **handoff-meta** when `issue: #N` was provided
+- Leaving blockers or clarifications only in chat/memory without an issue comment
+- Eng weakening/skipping QA tests to go green; verify phase skipped after FE/BE
+- Spinning more than 2 fix→verify cycles without a new signal
+- Leaving the GitHub issue open after qa verify PASS when later cast roles were skipped
+- Running cast stages without creating stage issues, or leaving completed stage issues open
+- Shipping silent tech debt (TODO/FIXME/skipped tests) without a follow-up GitHub issue

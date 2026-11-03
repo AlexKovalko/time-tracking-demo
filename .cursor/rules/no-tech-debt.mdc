@@ -1,0 +1,22 @@
+---
+description: Do not silently accumulate tech debt — file follow-up GitHub issues instead
+alwaysApply: true
+---
+
+# No silent tech debt
+
+We do **not** accumulate unpaid tech debt in the working tree.
+
+## Rules
+
+- Do **not** leave `TODO` / `FIXME` / skipped tests / “temporary” hacks / commented-out production paths as the only record of deferred work.
+- If something is **out of current AC / cast scope** but should happen later: create a **follow-up GitHub issue** (`gh issue create`) and link it from the role handoff. Prefer label `tech-debt` (create the label once if missing).
+- If something is **required for current `AC-N`**: fix it in this ticket — do not defer behind a follow-up issue.
+- Do **not** weaken, skip, or delete QA tests to go green; open a blocker for eng instead.
+- Handoff must list any follow-up issue numbers under **Следующему** / `next` (and optionally `follow_ups: #A, #B` in handoff-meta).
+
+## Anti-patterns
+
+- Shipping with “we’ll clean this later” and no filed issue
+- Burying debt only in chat or agentmemory
+- Expanding the current ticket into unbounded cleanup (file issues; keep cast scope tight)
