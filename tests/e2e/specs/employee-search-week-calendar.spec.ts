@@ -319,7 +319,13 @@ test.describe("AC-4 · Selected employee stays visible (#97)", () => {
     const clear = byTestId(page, tid.entriesFilterEmployeeClear);
     if (await clear.isVisible().catch(() => false)) {
       await clear.click();
-      await expect(trigger).toContainText(/все сотрудники|all employees/i);
+      // AC (#112/#113): clear → empty input; default search placeholder; no «Все сотрудники»
+      await expect(input).toHaveValue("");
+      await expect(input).not.toHaveValue(/все сотрудники|all employees/i);
+      await expect(input).toHaveAttribute(
+        "placeholder",
+        /найти сотрудника|search employee/i,
+      );
     }
   });
 });

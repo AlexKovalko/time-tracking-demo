@@ -316,14 +316,10 @@ test.describe("AC-4 · entries employee filter Combobox (#88)", () => {
     if (await clear.isVisible().catch(() => false)) {
       await clear.click();
     } else {
+      // #112: no «Все сотрудники» option — clear via empty input / Escape
       await input.click();
       await input.fill("");
-      const allOpt = page.getByRole("option", {
-        name: /все сотрудники|all employees/i,
-      });
-      if (await allOpt.count()) {
-        await allOpt.first().click();
-      }
+      await page.keyboard.press("Escape");
     }
     if (await apply.count()) {
       await apply.click();

@@ -71,12 +71,12 @@ export function EmployeeCombobox({
   const [selectedLabel, setSelectedLabel] = useState("");
 
   const unnamed = t("employees.unnamed");
-  const allLabel = t("entries.filter.employeeAll");
   const placeholderText =
     placeholder ?? t("combobox.employee.placeholder");
 
-  const committedLabel =
-    allowAll && value === "all" ? allLabel : selectedLabel;
+  // allowAll + value "all" = implicit all-employees filter; keep input empty
+  // (do not paint entries.filter.employeeAll as committed label or list option).
+  const committedLabel = value === "all" ? "" : selectedLabel;
 
   const isBrowsingCommitted =
     Boolean(committedLabel) &&
@@ -106,7 +106,7 @@ export function EmployeeCombobox({
     let cancelled = false;
     async function resolveSelected() {
       if (allowAll && value === "all") {
-        setSelectedLabel(allLabel);
+        setSelectedLabel("");
         setSelectionCache(null);
         onSelectedEmployeeChange?.(null);
         return;
@@ -140,7 +140,7 @@ export function EmployeeCombobox({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowAll, allLabel, unnamed, value]);
+  }, [allowAll, unnamed, value]);
 
   const fetchEmployees = useCallback(
     async (q: string, pageToLoad: number, append: boolean) => {
@@ -194,16 +194,6 @@ export function EmployeeCombobox({
 
   const listRows = useMemo(() => {
     const rows: Array<{ id: string; label: string }> = [];
-    const filterQuery = query.trim().toLowerCase();
-    const showAllOption =
-      allowAll &&
-      (!filterQuery ||
-        isBrowsingCommitted ||
-        allLabel.toLowerCase().includes(filterQuery));
-
-    if (showAllOption) {
-      rows.push({ id: "all", label: allLabel });
-    }
 
     // Pin selected employee when absent from current search page (AC-4).
     if (
@@ -223,16 +213,7 @@ export function EmployeeCombobox({
       rows.push({ id: emp.id, label: employeeLabel(emp, unnamed) });
     }
     return rows;
-  }, [
-    allLabel,
-    allowAll,
-    isBrowsingCommitted,
-    options,
-    query,
-    selectionCache,
-    unnamed,
-    value,
-  ]);
+  }, [options, selectionCache, unnamed, value]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -253,10 +234,11 @@ export function EmployeeCombobox({
   function commit(next: string) {
     if (next === "all") {
       setSelectionCache(null);
+      setSelectedLabel("");
       onSelectedEmployeeChange?.(null);
       onValueChange("all");
       setOpen(false);
-      setQuery(allLabel);
+      setQuery("");
       return;
     }
     if (!next) {
