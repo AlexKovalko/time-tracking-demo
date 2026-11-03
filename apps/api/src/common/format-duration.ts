@@ -19,6 +19,7 @@ export function formatDuration(
   const parts: string[] = [];
   if (h > 0) parts.push(`${h}${suf.h}`);
   if (m > 0) parts.push(`${m}${suf.m}`);
-  if (sec > 0) parts.push(`${sec}${suf.s}`);
+  // Seconds only when there are no hours (truncate when hours>0 / showing h+m).
+  if (h === 0 && sec > 0) parts.push(`${sec}${suf.s}`);
   return parts.join(' ');
 }

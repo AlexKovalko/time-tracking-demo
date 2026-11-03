@@ -23,7 +23,8 @@ function normalizeLocale(locale: string): "ru" | "en" {
 
 /**
  * Closed-duration display (AC-31).
- * Examples: 48ч · 4ч 20м · 2м 5с · 0с / 48h · 4h 20m · 2m 5s · 0s
+ * Examples: 48ч · 4ч 20м · 2м 5с · 2м · 5с / 48h · 4h 20m · 2m 5s · 2m · 5s
+ * When hours > 0, seconds are truncated (never shown): 2ч 26м 19с → 2ч 26м.
  */
 export function formatDuration(
   totalSeconds: number,
@@ -38,7 +39,10 @@ export function formatDuration(
   const parts: string[] = [];
   if (hours > 0) parts.push(`${hours}${s.hours}`);
   if (minutes > 0) parts.push(`${minutes}${s.minutes}`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}${s.seconds}`);
+  // Seconds only when there are no hours (truncate when hours>0 / showing h+m).
+  if (hours === 0 && (seconds > 0 || parts.length === 0)) {
+    parts.push(`${seconds}${s.seconds}`);
+  }
   return parts.join(" ");
 }
 
