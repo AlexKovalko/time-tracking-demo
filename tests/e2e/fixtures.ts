@@ -10,7 +10,7 @@ import { API_BASE_URL } from "../helpers/env";
 /**
  * data-testid map from docs/specs/time-tracking-calendar/ux.md
  * (+ aliases for time-tracking-ui baseline ids).
- * AC tickets: #32–#63.
+ * AC tickets: #32–#63 (baseline); #67–#79 (AC-33…45).
  */
 export const tid = {
   // Chrome / nav (AC-18)
@@ -56,6 +56,17 @@ export const tid = {
   employeeProfileFilterQ: "employee-profile-filter-q",
   employeeProfileEntries: "employee-profile-entries",
   employeeProfileEmpty: "employee-profile-empty",
+  // Profile charts + labeled info (AC-33…36, AC-43)
+  employeeProfileChartOverTime: "employee-profile-chart-over-time",
+  employeeProfileChartOverTimeDay: "employee-profile-chart-over-time-day",
+  employeeProfileChartOverTimeWeek: "employee-profile-chart-over-time-week",
+  employeeProfileChartDescription: "employee-profile-chart-description",
+  employeeProfileChartEmpty: "employee-profile-chart-empty",
+  employeeProfileInfo: "employee-profile-info",
+  employeeProfileInfoTitle: "employee-profile-info-title",
+  employeeProfileInfoDepartment: "employee-profile-info-department",
+  employeeProfileInfoEmail: "employee-profile-info-email",
+  employeeProfileInfoPhone: "employee-profile-info-phone",
 
   // FAB timer (AC-1…AC-4) — canonical; launcher/collapsed = aliases
   timerFab: "timer-fab",
@@ -117,6 +128,10 @@ export const tid = {
   reportChartBreakdownEmployees: "report-chart-breakdown-employees",
   reportChartBreakdownDepartments: "report-chart-breakdown-departments",
   reportChartEmpty: "report-chart-empty",
+
+  // Delete entry confirm (AC-42)
+  entriesDeleteConfirm: "entries-delete-confirm",
+  entriesDeleteDialog: "entries-delete-dialog",
 } as const;
 
 export const UUID_LABEL_RE =
@@ -427,3 +442,66 @@ export function assertNoUuidLabels(labels: string[]): void {
     }
   }
 }
+
+/** Open profile for a seeded Cyrillic FIO employee (paginates if needed). */
+export async function openSeedEmployeeProfile(page: Page): Promise<void> {
+  await gotoEmployees(page);
+  const peopleTab = byTestId(page, tid.employeesTabPeople);
+  if (await peopleTab.count()) {
+    await peopleTab.click();
+  }
+  const list = byTestId(page, tid.employeesList);
+  await expect(list).toBeVisible();
+  for (let i = 0; i < 25; i += 1) {
+    const seedRow = list.locator(":scope > *").filter({
+      hasText: /[А-ЯЁа-яё]{3,}/,
+    });
+    if ((await seedRow.count()) > 0) {
+      const row = seedRow.first();
+      const profileAction = row.getByRole("link", {
+        name: /^(профиль|profile)$/i,
+      });
+      if ((await profileAction.count()) > 0) {
+        await profileAction.click();
+      } else if ((await row.getByTestId("employee-name").count()) > 0) {
+        await row.getByTestId("employee-name").click();
+      } else {
+        await row.click();
+      }
+      await expect(byTestId(page, tid.employeeProfile)).toBeVisible({
+        timeout: 15_000,
+      });
+      return;
+    }
+    const next = byTestId(page, tid.employeesPaginationNext);
+    if ((await next.count()) === 0 || (await next.isDisabled())) break;
+    await next.click();
+    await expect(list).toBeVisible();
+  }
+  const fallback = page.getByRole("link", { name: /^(профиль|profile)$/i });
+  await fallback.first().click();
+  await expect(byTestId(page, tid.employeeProfile)).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+/** Apply a ~28-day period on employee profile filters. */
+export async function applyProfilePeriod(
+  page: Page,
+  fromIso?: string,
+  toIso?: string,
+): Promise<void> {
+  const to = toIso ?? new Date().toISOString().slice(0, 10);
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - 28);
+  const from = fromIso ?? fromDate.toISOString().slice(0, 10);
+  await byTestId(page, tid.employeeProfileFilterFrom).fill(from);
+  await byTestId(page, tid.employeeProfileFilterTo).fill(to);
+  const apply = page.getByRole("button", {
+    name: /применить|apply|показать|show/i,
+  });
+  if (await apply.count()) {
+    await apply.click();
+  }
+}
+

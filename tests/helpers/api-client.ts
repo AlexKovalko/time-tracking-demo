@@ -324,14 +324,44 @@ export async function getReportCharts(params: {
   to: string;
   bucket?: "day" | "week";
   breakdown?: "employees" | "departments";
+  /** When set — employee-scoped profile charts (AC-33…36). */
+  employeeId?: string;
 }): Promise<{ status: number; body: unknown }> {
   const q = new URLSearchParams();
   q.set("from", params.from);
   q.set("to", params.to);
   if (params.bucket) q.set("bucket", params.bucket);
   if (params.breakdown) q.set("breakdown", params.breakdown);
+  if (params.employeeId) q.set("employeeId", params.employeeId);
   const res = await apiRequest(`/reports/charts?${q}`);
   const body = await parseJson(res).catch(() => null);
   return { status: res.status, body };
+}
+
+/** Prefer GET /reports/charts?employeeId=…; fallback GET /employees/:id/charts (AC-33…36). */
+export async function getEmployeeCharts(params: {
+  employeeId: string;
+  from: string;
+  to: string;
+  bucket?: "day" | "week";
+}): Promise<{ status: number; body: unknown; path: string }> {
+  const viaReport = await getReportCharts({
+    from: params.from,
+    to: params.to,
+    bucket: params.bucket,
+    employeeId: params.employeeId,
+  });
+  if (viaReport.status !== 404 && viaReport.status !== 400) {
+    return { ...viaReport, path: "/reports/charts?employeeId" };
+  }
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  if (params.bucket) q.set("bucket", params.bucket);
+  const res = await apiRequest(
+    `/employees/${encodeURIComponent(params.employeeId)}/charts?${q}`,
+  );
+  const body = await parseJson(res).catch(() => null);
+  return { status: res.status, body, path: `/employees/:id/charts` };
 }
 
